@@ -1,5 +1,5 @@
-# ANDE Chain Quick Start - Using Reth directly
-version: '3.9'
+# ANDE Chain Full Stack - Production Ready
+# Reth (official) + Evolve Sequencer + Celestia DA
 
 networks:
   andechain:
@@ -9,11 +9,47 @@ networks:
 volumes:
   reth-data:
     driver: local
+  evolve-data:
+    driver: local
+  celestia-data:
+    driver: local
   jwttoken:
     driver: local
 
 services:
-  # JWT Token Initialization
+  # ============================================
+  # 1. Celestia Light Node (Data Availability)
+  # ============================================
+  celestia:
+    container_name: celestia
+    image: ghcr.io/celestiaorg/celestia-node:v0.28.2-mocha
+    restart: unless-stopped
+    ports:
+      - "2121:2121"   # Celestia P2P
+      - "26658:26658" # Celestia RPC
+    volumes:
+      - celestia-data:/home/celestia
+    command:
+      - "sh"
+      - "-c"
+      - "celestia light init --p2p.network mocha-4 || true && celestia light start --core.ip rpc-mocha.pops.one --p2p.network mocha-4 --rpc.addr 0.0.0.0 --rpc.port 26658"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "netstat -tuln | grep -q ':26658'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ============================================
+  # 2. JWT Token Initialization
+  # ============================================
   jwt-init:
     container_name: jwt-init
     image: alpine:3.22.0
@@ -26,7 +62,9 @@ services:
     networks:
       - andechain
 
-  # ANDE Node using Reth directly
+  # ============================================
+  # 3. ANDE Node (Execution Layer - Reth)
+  # ============================================
   ande-node:
     container_name: ande-node
     image: ghcr.io/paradigmxyz/reth:v1.1.3
@@ -78,3 +116,126 @@ services:
       start_period: 60s
     networks:
       - andechain
+
+  # ============================================
+  # 4. Evolve Sequencer (Consensus Layer)
+  # ============================================
+  evolve:
+    container_name: evolve
+    image: ghcr.io/evstack/ev-node-evm-single:main
+    restart: unless-stopped
+    depends_on:
+      ande-node:
+        condition: service_started
+      celestia:
+        condition: service_started
+      jwt-init:
+        condition: service_completed_successfully
+    ports:
+      - "7331:7331"    # RPC
+      - "7676:7676"    # P2P
+      - "26660:26660"  # Metrics
+    volumes:
+      - jwttoken:/jwt:ro
+      - evolve-data:/root/.evolve
+      - ./specs/genesis.json:/genesis.json:ro
+    environment:
+      # EVM Engine Configuration
+      - EVM_ENGINE_URL=http://ande-node:8551
+      - EVM_ETH_URL=http://ande-node:8545
+      - EVM_JWT_PATH=/jwt/jwt.hex
+
+      # Adaptive Block Production
+      - EVM_BLOCK_TIME=1s
+      - EVM_LAZY_BLOCK_INTERVAL=5s
+      - EVM_LAZY_MODE=true
+
+      # DA Submission Optimization
+      - DA_BLOCK_TIME=12s
+      - DA_BATCH_SIZE=50
+      - DA_SUBMISSION_GAS_MULTIPLIER=1.3
+
+      # Celestia Mocha-4
+      - DA_ADDRESS=http://celestia:26658
+      - DA_NAMESPACE=000000000000000000000000000000000000616e6465636861696e2d7631
+      - DA_START_HEIGHT=8624000
+      - DA_AUTH_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdLCJOb25jZSI6InNtM3UxL0pNR2p4c296TktVVy9tWEdIcjBPUlpudXgzanRQMkdEUTdBbHM9IiwiRXhwaXJlc0F0IjoiMDAwMS0wMS0wMVQwMDowMDowMFoifQ.hp2KgPgkXq1t5bnsMkngt1H7ElIYIazmzyJUUsw6LDk
+
+      # Gas Configuration
+      - DA_GAS_PRICE=0.004
+      - DA_GAS_MULTIPLIER=1.1
+      - DA_MAX_SUBMIT_ATTEMPTS=50
+      - DA_RETRY_DELAY=10s
+
+      # Chain ID
+      - CHAIN_ID=6174
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "🚀 Starting ANDE Chain Sequencer..."
+
+        # Wait for ande-node
+        until wget -q -O- --post-data='{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+          --header='Content-Type:application/json' http://ande-node:8545 > /dev/null 2>&1; do
+          echo "⏳ Waiting for ande-node RPC..."
+          sleep 5
+        done
+
+        # Get genesis hash
+        GENESIS_HASH=$$(wget -q -O- --post-data='{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x0",false],"id":1}' \
+          --header='Content-Type:application/json' http://ande-node:8545 | grep -o '"hash":"0x[^"]*"' | cut -d'"' -f4)
+
+        echo "✅ Genesis Hash: $$GENESIS_HASH"
+
+        # Initialize if needed
+        if [ ! -f /root/.evolve/config/signer.json ]; then
+          echo "📝 Initializing Evolve..."
+          echo "andechain-prod-2024" > /tmp/pass.txt
+          evm-single init \
+            --home=/root/.evolve \
+            --chain_id=ande-chain-6174 \
+            --evnode.node.aggregator=true \
+            --evnode.da.namespace=$$DA_NAMESPACE \
+            --evnode.da.address=$$DA_ADDRESS \
+            --evnode.signer.passphrase_file=/tmp/pass.txt
+          rm /tmp/pass.txt
+        fi
+
+        echo "🚀 Starting ANDE Sequencer"
+        echo "andechain-prod-2024" > /tmp/pass-start.txt
+        exec evm-single start \
+          --home=/root/.evolve \
+          --evm.eth-url=$$EVM_ETH_URL \
+          --evm.engine-url=$$EVM_ENGINE_URL \
+          --evm.jwt-secret-file=/jwt/jwt.hex \
+          --evm.genesis-hash=$$GENESIS_HASH \
+          --evnode.node.aggregator=true \
+          --evnode.node.lazy_mode=true \
+          --evnode.node.block_time=$$EVM_BLOCK_TIME \
+          --evnode.node.lazy_block_interval=$$EVM_LAZY_BLOCK_INTERVAL \
+          --evnode.da.address=$$DA_ADDRESS \
+          --evnode.da.namespace=$$DA_NAMESPACE \
+          --evnode.da.auth_token=$$DA_AUTH_TOKEN \
+          --evnode.da.max_submit_attempts=$$DA_MAX_SUBMIT_ATTEMPTS \
+          --evnode.da.block_time=$$DA_BLOCK_TIME \
+          --evnode.signer.passphrase_file=/tmp/pass-start.txt \
+          --evnode.p2p.listen_address=/ip4/0.0.0.0/tcp/7676 \
+          --evnode.rpc.address=0.0.0.0:7331 \
+          --evnode.instrumentation.prometheus=true \
+          --evnode.instrumentation.prometheus_listen_addr=:26660 \
+          --evnode.log.level=info \
+          --evnode.log.format=json
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:7331/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
