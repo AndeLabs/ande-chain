@@ -1,0 +1,62 @@
+# Prometheus Configuration for ANDE Chain Testnet
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'ande-testnet'
+    environment: 'testnet'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# Scrape configurations
+scrape_configs:
+  # Sequencer Node 1
+  - job_name: 'sequencer-1'
+    static_configs:
+      - targets: ['ande-sequencer-1:9090']
+        labels:
+          instance: 'sequencer-1'
+          role: 'primary'
+
+  # Sequencer Node 2
+  - job_name: 'sequencer-2'
+    static_configs:
+      - targets: ['ande-sequencer-2:9090']
+        labels:
+          instance: 'sequencer-2'
+          role: 'backup'
+
+  # Sequencer Node 3
+  - job_name: 'sequencer-3'
+    static_configs:
+      - targets: ['ande-sequencer-3:9090']
+        labels:
+          instance: 'sequencer-3'
+          role: 'backup'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Celestia Light Node
+  - job_name: 'celestia'
+    static_configs:
+      - targets: ['celestia-light:26658']
+    metrics_path: '/metrics'
+
+  # HAProxy stats
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['haproxy:8404']
+    metrics_path: '/metrics'
+
+# Recording rules for custom metrics
+rule_files:
+  # - "rules/*.yml"

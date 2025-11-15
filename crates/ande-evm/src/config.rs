@@ -6,7 +6,9 @@
 //! - Production deployment requirements
 
 use alloy_primitives::U256;
-use revm::primitives::{CfgEnv, hardfork::SpecId};
+use revm::primitives::hardfork::SpecId;
+use revm::context::CfgEnv;  // Reth 1.8.2 / REVM 29 correct path
+use revm_context_interface::cfg::AnalysisKind;
 
 /// Default maximum bytes for txpool selection (1.85 MiB)
 pub const DEFAULT_MAX_TXPOOL_BYTES: u64 = 1_939_865;
@@ -128,23 +130,22 @@ impl AndeEvmConfig {
     }
 
     /// Create REVM CfgEnv from AndeEvmConfig
+    ///
+    /// Uses REVM 29 builder pattern following Reth 1.8.2 best practices
     #[inline(always)]
     pub fn to_cfg_env(&self) -> CfgEnv {
-        CfgEnv {
-            chain_id: self.chain_id,
-            spec_id: self.spec_id,
-            perf_analyse_created_bytecodes: revm::primitives::AnalysisKind::Analyse,
-            limit_contract_code_size: Some(0x6000), // 24KB - EIP-170
-            
-            // Disable checks for performance (safe in controlled environment)
-            disable_balance_check: false, // Keep enabled for security
-            disable_block_gas_limit: false,
-            disable_eip3607: false,
-            disable_base_fee: false,
-            disable_beneficiary_reward: false,
-            
-            ..Default::default()
-        }
+        // REVM 29 uses builder pattern: CfgEnv::new().with_chain_id().with_spec()
+        let mut cfg = CfgEnv::new()
+            .with_chain_id(self.chain_id)
+            .with_spec(self.spec_id);
+
+        // Configure contract code size limit (24KB - EIP-170)
+        cfg.limit_contract_initcode_size = Some(0x6000);
+
+        // Keep security checks enabled for production
+        cfg.disable_nonce_check = false;
+
+        cfg
     }
 
     /// Get chain ID

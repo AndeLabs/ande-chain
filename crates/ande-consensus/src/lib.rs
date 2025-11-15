@@ -1,24 +1,69 @@
-//! # Ande Consensus
+//! # ANDE Consensus - Production Decentralized Consensus
 //!
-//! Consensus mechanism implementation.
+//! This module implements the complete consensus mechanism for ANDE Chain,
+//! including validator set management, proposer selection, block attestation,
+//! and Byzantine fault tolerance.
+//!
+//! ## Architecture
+//!
+//! ```text
+//! ┌──────────────────────────────────────────────────────────┐
+//! │                   Consensus Engine                        │
+//! ├──────────────────────────────────────────────────────────┤
+//! │                                                            │
+//! │  ┌─────────────────┐  ┌──────────────────┐              │
+//! │  │ Validator Set   │  │ Contract Client  │              │
+//! │  │ Management      │←→│ (on-chain sync)  │              │
+//! │  └─────────────────┘  └──────────────────┘              │
+//! │           ↓                     ↓                         │
+//! │  ┌─────────────────┐  ┌──────────────────┐              │
+//! │  │ Proposer        │  │ Block Validation │              │
+//! │  │ Selection       │  │ & Attestation    │              │
+//! │  └─────────────────┘  └──────────────────┘              │
+//! │           ↓                     ↓                         │
+//! │  ┌─────────────────────────────────────┐                │
+//! │  │    BFT Finality Engine              │                │
+//! │  │    (2/3+1 voting power threshold)   │                │
+//! │  └─────────────────────────────────────┘                │
+//! │                                                            │
+//! └──────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## Features
+//!
+//! - **Weighted Round-Robin**: CometBFT-style proposer selection
+//! - **BFT Finality**: 2/3+1 voting power threshold
+//! - **Timeout Detection**: Automatic rotation on missed blocks
+//! - **Slashing Integration**: Report invalid blocks on-chain
+//! - **Metrics & Observability**: Prometheus metrics export
+//! - **Production Ready**: Error handling, logging, testing
 
 #![warn(missing_docs)]
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
 
-use ande_primitives::consensus::ConsensusConfig;
+pub mod config;
+pub mod contract_client;
+pub mod engine;
+pub mod error;
+pub mod metrics;
+pub mod types;
+pub mod validator_set;
 
-/// Consensus engine
-pub struct ConsensusEngine {
-    config: ConsensusConfig,
-}
+pub use config::ConsensusConfig;
+pub use engine::ConsensusEngine;
+pub use error::{ConsensusError, Result};
+pub use types::{
+    AttestationInfo, BlockProposal, EpochInfo, RotationInfo, ValidatorInfo, ValidatorSetUpdate,
+};
 
-impl ConsensusEngine {
-    /// Create new consensus engine
-    pub fn new(config: ConsensusConfig) -> Self {
-        Self { config }
-    }
-    
-    /// Get configuration
-    pub fn config(&self) -> &ConsensusConfig {
-        &self.config
-    }
+/// Re-export commonly used types
+pub mod prelude {
+    pub use crate::{
+        config::ConsensusConfig,
+        engine::ConsensusEngine,
+        error::{ConsensusError, Result},
+        types::{AttestationInfo, BlockProposal, ValidatorInfo},
+    };
 }

@@ -85,6 +85,9 @@ revm-interpreter = "15.1.0"
 ande-primitives = { path = "crates/ande-primitives" }
 ande-consensus = { path = "crates/ande-consensus" }
 ande-evm = { path = "crates/ande-evm" }
+ande-storage = { path = "crates/ande-storage" }
+ande-rpc = { path = "crates/ande-rpc" }
+ande-network = { path = "crates/ande-network" }
 
 # Performance dependencies
 jemalloc-ctl = "0.5"

@@ -5,6 +5,22 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+# Internal crates
 ande-primitives = { workspace = true }
+
+# Core dependencies
+tokio = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# Blockchain primitives
+alloy-primitives = { workspace = true }
+
+# Metrics
+prometheus = { workspace = true }
+
+# Ethereum contract interaction
+ethers = { version = "2.0", features = ["abigen", "ws"] }
+futures = "0.3"
