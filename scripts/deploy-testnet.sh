@@ -34,8 +34,8 @@ LOG_FILE="${PROJECT_ROOT}/logs/deployment-$(date +%Y%m%d-%H%M%S).log"
 # Deployment constants
 MAX_RETRIES=3
 RETRY_DELAY=5
-MIN_BALANCE_ETH="0.1"  # Minimum balance required in ETH
-ESTIMATED_GAS_COST_ETH="0.05"  # Estimated gas cost for all deployments
+MIN_BALANCE_TIA="0.1"  # Minimum balance required in TIA (Celestia Mocha-4)
+ESTIMATED_GAS_COST_TIA="0.05"  # Estimated gas cost for all deployments in TIA
 
 # Create logs directory
 mkdir -p "${PROJECT_ROOT}/logs"
@@ -302,33 +302,35 @@ validate_balances() {
             continue
         fi
 
-        # Convert to ETH
-        local balance_eth=$(echo "scale=6; $balance_wei / 1000000000000000000" | bc)
+        # Convert wei to TIA (Celestia uses 18 decimals like Ethereum)
+        local balance_tia=$(echo "scale=6; $balance_wei / 1000000000000000000" | bc)
 
-        log_success "$name balance: $balance_eth ETH"
+        log_success "$name balance: $balance_tia TIA"
 
-        # Check if balance is sufficient
-        if (( $(echo "$balance_eth < $MIN_BALANCE_ETH" | bc -l) )); then
-            log_warning "$name balance ($balance_eth ETH) is below recommended minimum ($MIN_BALANCE_ETH ETH)"
-            log_warning "Deployment may fail due to insufficient gas"
+        # Check if balance is sufficient for Celestia Mocha-4 deployment
+        if (( $(echo "$balance_tia < $MIN_BALANCE_TIA" | bc -l) )); then
+            log_warning "$name balance ($balance_tia TIA) is below recommended minimum ($MIN_BALANCE_TIA TIA)"
+            log_warning "Deployment may fail due to insufficient gas on Celestia Mocha-4"
         fi
     done
 
     if [ "$all_funded" = false ]; then
-        log_error "One or more wallets are not funded!"
+        log_error "One or more wallets are not funded with TIA!"
         log_error ""
-        log_error "To fund wallets, visit:"
+        log_error "To fund wallets with TIA (Celestia Mocha-4 testnet), visit:"
         log_error "  • Celestia Mocha-4 faucet: https://faucet.celestia-mocha.com/"
-        log_error "  • Ethereum Sepolia faucet: https://sepoliafaucet.com/"
         log_error ""
         log_error "Wallet addresses to fund:"
         log_error "  1. $SEQUENCER_1_ADDRESS"
         log_error "  2. $SEQUENCER_2_ADDRESS"
         log_error "  3. $SEQUENCER_3_ADDRESS"
+        log_error ""
+        log_error "Note: ANDE Chain is a sovereign rollup with dual-token (ANDE)."
+        log_error "For consensus contracts deployment on Celestia Mocha-4, TIA is required."
         exit 1
     fi
 
-    log_success "All wallets have sufficient balance for deployment"
+    log_success "All wallets have sufficient TIA balance for Celestia Mocha-4 deployment"
 }
 
 # Compile Rust code
