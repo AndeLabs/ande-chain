@@ -1,0 +1,10 @@
+[package]
+name = "ande-consensus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ande-primitives = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

@@ -1,0 +1,561 @@
+# 🌐 ANDE Chain - Sovereign EVM Rollup Production Stack
+# Full Production Configuration - Monorepo Unified Version
+# Architecture: ande-node (Reth-based) + Evolve Sequencer + Celestia DA
+# Features: Token Duality Precompile + Parallel EVM + MEV Protection
+# Updated: 2024-11 - Complete Migration from ev-reth + ande repositories
+
+version: '3.9'
+
+networks:
+  andechain:
+    name: andechain
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  ande-node-data:
+    driver: local
+  evolve-data:
+    driver: local
+  celestia-data:
+    driver: local
+  jwttoken:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  postgres-data:
+    driver: local
+  certbot-certs:
+    driver: local
+  certbot-www:
+    driver: local
+  nginx-logs:
+    driver: local
+  faucet-data:
+    driver: local
+
+services:
+  # ============================================
+  # 1. Celestia Light Node (Data Availability Layer)
+  # ============================================
+  celestia:
+    container_name: celestia
+    image: ghcr.io/celestiaorg/celestia-node:v0.28.2-mocha
+    restart: unless-stopped
+    ports:
+      - "2121:2121"   # Celestia P2P
+      - "26658:26658" # Celestia RPC
+    volumes:
+      - celestia-data:/home/celestia
+    command: 
+      - "sh"
+      - "-c"
+      - "celestia light init --p2p.network mocha-4 || true && celestia light start --core.ip rpc-mocha.pops.one --p2p.network mocha-4 --rpc.addr 0.0.0.0 --rpc.port 26658"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "netstat -tuln | grep -q ':26658'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        labels: "service=celestia"
+
+  # ============================================
+  # 2. JWT Token Initialization
+  # ============================================
+  jwt-init:
+    container_name: jwt-init
+    image: alpine:3.22.0
+    volumes:
+      - jwttoken:/jwt
+    command: 
+      - "/bin/sh"
+      - "-c"
+      - "if [ ! -f /jwt/jwt.hex ]; then apk add --no-cache openssl && openssl rand -hex 32 | tr -d '\\n' > /jwt/jwt.hex && echo '✅ JWT generated'; else echo '✅ JWT exists'; fi"
+    networks:
+      - andechain
+
+  # ============================================
+  # 3. Data Directory Initialization
+  # ============================================
+  data-init:
+    container_name: data-init
+    image: alpine:3.22.0
+    volumes:
+      - ande-node-data:/data
+    command: 
+      - "/bin/sh"
+      - "-c"
+      - "chown -R 65532:65532 /data && echo '✅ Data permissions fixed'"
+    networks:
+      - andechain
+
+  # ============================================
+  # 4. ANDE Node (Execution Layer)
+  # Custom Reth with ANDE Precompile, Parallel EVM & MEV
+  # ============================================
+  ande-node:
+    container_name: ande-node
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_PROFILE: release
+        FEATURES: "jemalloc asm-keccak"
+    image: ande-chain:latest
+    restart: unless-stopped
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
+      jwt-init:
+        condition: service_completed_successfully
+      celestia:
+        condition: service_started
+    ports:
+      - "8545:8545"   # HTTP RPC
+      - "8546:8546"   # WebSocket
+      - "8551:8551"   # Engine API
+      - "9001:9001"   # Metrics (Main)
+      - "9091:9091"   # Metrics (Parallel EVM)
+      - "9092:9092"   # Metrics (MEV)
+      - "30303:30303" # P2P TCP
+      - "30303:30303/udp" # P2P UDP
+    volumes:
+      - ./specs/genesis.json:/genesis.json:ro
+      - jwttoken:/jwt:ro
+      - ande-node-data:/data
+    environment:
+      - RUST_LOG=${RUST_LOG:-info,ande_evm=debug,ande_consensus=debug}
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+      - ANDE_ENABLE_PARALLEL_EVM=${ENABLE_PARALLEL_EVM:-true}
+      - ANDE_ENABLE_MEV_DETECTION=${ENABLE_MEV_DETECTION:-true}
+      - ANDE_PRECOMPILE_ADDRESS=0x00000000000000000000000000000000000000FD
+      - MAX_PEERS=${MAX_PEERS:-50}
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          cpus: '2'
+          memory: 8G
+    command:
+      - node
+      - --datadir=/data
+      - --chain=/genesis.json
+      - --http
+      - --http.addr=0.0.0.0
+      - --http.port=8545
+      - --http.api=admin,eth,net,web3,txpool,debug,trace
+      - --http.corsdomain=*
+      - --ws
+      - --ws.addr=0.0.0.0
+      - --ws.port=8546
+      - --ws.api=eth,net,web3,txpool
+      - --ws.origins=*
+      - --authrpc.addr=0.0.0.0
+      - --authrpc.port=8551
+      - --authrpc.jwtsecret=/jwt/jwt.hex
+      - --port=30303
+      - --max-outbound-peers=25
+      - --max-inbound-peers=25
+      - --disable-discovery
+      - --metrics=0.0.0.0:9001
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q -O- --post-data='{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}' --header='Content-Type:application/json' http://localhost:8545 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service=ande-node"
+
+  # ============================================
+  # 5. Evolve Sequencer (Consensus Layer)
+  # ============================================
+  evolve:
+    container_name: evolve
+    image: ghcr.io/evstack/ev-node-evm-single:main
+    restart: unless-stopped
+    depends_on:
+      ande-node:
+        condition: service_started
+      celestia:
+        condition: service_started
+      jwt-init:
+        condition: service_completed_successfully
+    ports:
+      - "7331:7331"    # RPC
+      - "7676:7676"    # P2P
+      - "26660:26660"  # Metrics
+    volumes:
+      - jwttoken:/jwt:ro
+      - evolve-data:/root/.evolve
+      - ./specs/genesis.json:/genesis.json:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+    environment:
+      # EVM Engine Configuration
+      - EVM_ENGINE_URL=http://ande-node:8551
+      - EVM_ETH_URL=http://ande-node:8545
+      - EVM_JWT_PATH=/jwt/jwt.hex
+      
+      # Adaptive Block Production
+      - EVM_BLOCK_TIME=1s
+      - EVM_LAZY_BLOCK_INTERVAL=5s
+      - EVM_LAZY_MODE=true
+      
+      # DA Submission Optimization
+      - DA_BLOCK_TIME=12s
+      - DA_BATCH_SIZE=50
+      - DA_SUBMISSION_GAS_MULTIPLIER=1.3
+      
+      # Celestia Mocha-4
+      - DA_ADDRESS=http://celestia:26658
+      - DA_NAMESPACE=000000000000000000000000000000000000616e6465636861696e2d7631
+      - DA_START_HEIGHT=8624000
+      - DA_AUTH_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdLCJOb25jZSI6InNtM3UxL0pNR2p4c296TktVVy9tWEdIcjBPUlpudXgzanRQMkdEUTdBbHM9IiwiRXhwaXJlc0F0IjoiMDAwMS0wMS0wMVQwMDowMDowMFoifQ.hp2KgPgkXq1t5bnsMkngt1H7ElIYIazmzyJUUsw6LDk
+      
+      # Gas Configuration
+      - DA_GAS_PRICE=0.004
+      - DA_GAS_MULTIPLIER=1.1
+      - DA_MAX_SUBMIT_ATTEMPTS=50
+      - DA_RETRY_DELAY=10s
+      
+      # Chain ID
+      - CHAIN_ID=6174
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "🚀 Starting ANDE Chain Sequencer..."
+        
+        # Wait for ande-node
+        until wget -q -O- --post-data='{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+          --header='Content-Type:application/json' http://ande-node:8545 > /dev/null 2>&1; do
+          echo "⏳ Waiting for ande-node RPC..."
+          sleep 5
+        done
+        
+        # Get genesis hash
+        GENESIS_HASH=$$(wget -q -O- --post-data='{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x0",false],"id":1}' \
+          --header='Content-Type:application/json' http://ande-node:8545 | grep -o '"hash":"0x[^"]*"' | cut -d'"' -f4)
+        
+        echo "✅ Genesis Hash: $$GENESIS_HASH"
+        
+        # Initialize if needed
+        if [ ! -f /root/.evolve/config/signer.json ]; then
+          echo "📝 Initializing Evolve..."
+          echo "andechain-prod-2024" > /tmp/pass.txt
+          evm-single init \
+            --home=/root/.evolve \
+            --chain_id=ande-chain-6174 \
+            --evnode.node.aggregator=true \
+            --evnode.da.namespace=$$DA_NAMESPACE \
+            --evnode.da.address=$$DA_ADDRESS \
+            --evnode.signer.passphrase_file=/tmp/pass.txt
+          rm /tmp/pass.txt
+        fi
+        
+        echo "🚀 Starting ANDE Sequencer"
+        echo "andechain-prod-2024" > /tmp/pass-start.txt
+        exec evm-single start \
+          --home=/root/.evolve \
+          --evm.eth-url=$$EVM_ETH_URL \
+          --evm.engine-url=$$EVM_ENGINE_URL \
+          --evm.jwt-secret-file=/jwt/jwt.hex \
+          --evm.genesis-hash=$$GENESIS_HASH \
+          --evnode.node.aggregator=true \
+          --evnode.node.lazy_mode=true \
+          --evnode.node.block_time=$$EVM_BLOCK_TIME \
+          --evnode.node.lazy_block_interval=$$EVM_LAZY_BLOCK_INTERVAL \
+          --evnode.da.address=$$DA_ADDRESS \
+          --evnode.da.namespace=$$DA_NAMESPACE \
+          --evnode.da.auth_token=$$DA_AUTH_TOKEN \
+          --evnode.da.gas_price=$$DA_GAS_PRICE \
+          --evnode.da.gas_multiplier=$$DA_GAS_MULTIPLIER \
+          --evnode.da.max_submit_attempts=$$DA_MAX_SUBMIT_ATTEMPTS \
+          --evnode.da.block_time=$$DA_BLOCK_TIME \
+          --evnode.signer.passphrase_file=/tmp/pass-start.txt \
+          --evnode.p2p.listen_address=/ip4/0.0.0.0/tcp/7676 \
+          --evnode.rpc.address=0.0.0.0:7331 \
+          --evnode.instrumentation.prometheus=true \
+          --evnode.instrumentation.prometheus_listen_addr=:26660 \
+          --evnode.log.level=info \
+          --evnode.log.format=json
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:7331/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service=evolve"
+
+  # ============================================
+  # 6. Prometheus Monitoring
+  # ============================================
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/config/alerts.yml:/etc/prometheus/alert.rules.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================
+  # 7. Grafana Dashboard
+  # ============================================
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-andechain2024}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+      - GF_SERVER_ROOT_URL=${GRAFANA_URL:-http://localhost:3000}
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+      - loki
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================
+  # 8. Loki (Centralized Logs)
+  # ============================================
+  loki:
+    container_name: loki
+    image: grafana/loki:latest
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================
+  # 9. PostgreSQL (for Blockscout)
+  # ============================================
+  postgres:
+    container_name: postgres
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=blockscout
+      - POSTGRES_USER=blockscout
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-blockscout_secure_2024}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blockscout"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ============================================
+  # 10. Blockscout Explorer
+  # ============================================
+  blockscout:
+    container_name: blockscout
+    image: blockscout/blockscout:latest
+    restart: unless-stopped
+    stop_grace_period: 5m
+    command: sh -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ande-node:
+        condition: service_started
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=postgresql://blockscout:${POSTGRES_PASSWORD:-blockscout_secure_2024}@postgres:5432/blockscout?ssl=false
+      - ETHEREUM_JSONRPC_VARIANT=geth
+      - ETHEREUM_JSONRPC_HTTP_URL=http://ande-node:8545
+      - ETHEREUM_JSONRPC_WS_URL=ws://ande-node:8546
+      - ETHEREUM_JSONRPC_TRACE_URL=http://ande-node:8545
+      - CHAIN_ID=6174
+      - COIN=ANDE
+      - SUBNETWORK=Sovereign Rollup
+      - NETWORK=AndeChain
+      - PORT=4000
+      - BLOCKSCOUT_HOST=localhost
+      - BLOCKSCOUT_PROTOCOL=http
+      - SHOW_TESTNET_LABEL=true
+      - AVERAGE_BLOCK_TIME=5
+      - POOL_SIZE=30
+      - INDEXER_DISABLE_INTERNAL_TRANSACTIONS_FETCHER=true
+      - INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER=true
+      - SECRET_KEY_BASE=${BLOCKSCOUT_SECRET:-CHANGE_ME_IN_PRODUCTION}
+      - API_RATE_LIMIT=50
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ============================================
+  # 11. Faucet
+  # ============================================
+  faucet:
+    container_name: faucet
+    image: chainfaucet/eth-faucet:latest
+    restart: unless-stopped
+    depends_on:
+      ande-node:
+        condition: service_started
+    ports:
+      - "8081:8080"
+    environment:
+      - WEB3_PROVIDER=http://ande-node:8545
+      - CHAIN_ID=6174
+      - CHAIN_NAME=AndeChain
+      - NATIVE_TOKEN_NAME=ANDE
+      - NATIVE_TOKEN_SYMBOL=ANDE
+      - PRIVATE_KEY=${FAUCET_PRIVATE_KEY}
+      - FAUCET_AMOUNT=10
+      - FAUCET_COOLDOWN=86400
+      - FAUCET_NAME=AndeChain Faucet
+    volumes:
+      - faucet-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ============================================
+  # 12. Nginx Reverse Proxy
+  # ============================================
+  nginx:
+    container_name: nginx
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - ande-node
+      - evolve
+      - blockscout
+      - grafana
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"

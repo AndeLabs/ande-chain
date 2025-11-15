@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'andechain'
+    environment: 'production'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      timeout: 10s
+      api_version: v2
+
+# Load alerting rules
+rule_files:
+  - '/etc/prometheus/alerts.yml'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'ande-node'
+    static_configs:
+      - targets: ['ande-node:9001']
+    metrics_path: /metrics
+
+  - job_name: 'ande-parallel-evm'
+    static_configs:
+      - targets: ['ande-node:9091']
+
+  - job_name: 'ande-mev-detection'
+    static_configs:
+      - targets: ['ande-node:9092']
+
+  - job_name: 'evolve-sequencer'
+    static_configs:
+      - targets: ['evolve:26660']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']

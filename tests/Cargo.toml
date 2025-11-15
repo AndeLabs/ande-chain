@@ -1,0 +1,13 @@
+[package]
+name = "ande-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+ande-primitives = { workspace = true }
+ande-evm = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }

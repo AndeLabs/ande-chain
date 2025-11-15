@@ -1,0 +1,68 @@
+[package]
+name = "ande-evm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "Ande Chain EVM customizations with precompiles and parallel execution"
+
+[dependencies]
+# Reth dependencies
+reth-payload-primitives.workspace = true
+reth-primitives.workspace = true
+reth-primitives-traits.workspace = true
+reth-engine-primitives.workspace = true
+reth-transaction-pool.workspace = true
+reth-consensus.workspace = true
+reth-consensus-common.workspace = true
+reth-ethereum-consensus.workspace = true
+reth-chainspec.workspace = true
+reth-node-api.workspace = true
+reth-ethereum.workspace = true
+reth-ethereum-primitives.workspace = true
+reth-execution-types.workspace = true
+reth-evm.workspace = true
+reth-evm-ethereum.workspace = true
+reth-revm.workspace = true
+
+# revm
+revm.workspace = true
+revm-precompile.workspace = true
+revm-handler.workspace = true
+revm-context-interface.workspace = true
+revm-interpreter.workspace = true
+
+# Alloy dependencies
+alloy-rpc-types-engine.workspace = true
+alloy-primitives.workspace = true
+alloy-eips.workspace = true
+alloy-consensus.workspace = true
+alloy-rpc-types-txpool.workspace = true
+alloy-genesis.workspace = true
+
+# Core dependencies
+serde.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+jsonrpsee.workspace = true
+jsonrpsee-core.workspace = true
+jsonrpsee-proc-macros.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+tokio.workspace = true
+
+# Internal
+ande-primitives.workspace = true
+
+# Performance optimizations
+parking_lot = "0.12"
+num_cpus = "1.16"
+futures = "0.3"
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

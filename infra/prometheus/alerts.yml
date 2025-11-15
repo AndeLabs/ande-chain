@@ -1,0 +1,315 @@
+# =============================================================================
+# ANDE Chain - Prometheus Alerting Rules
+# Critical alerts for production monitoring
+# =============================================================================
+
+groups:
+  # =============================================================================
+  # CRITICAL ALERTS - Immediate action required
+  # =============================================================================
+  - name: ande_critical
+    interval: 30s
+    rules:
+      # Block production completely stopped
+      - alert: BlockProductionStalled
+        expr: increase(ande_blocks_proposed_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: consensus
+        annotations:
+          summary: "Block production has completely stalled"
+          description: "No blocks have been produced in the last 5 minutes. Chain may be halted."
+          action: "Check validator logs, network connectivity, and consensus health immediately"
+
+      # Chain not finalizing
+      - alert: FinalizationStalled
+        expr: time() - ande_finality_time_seconds > 300
+        for: 5m
+        labels:
+          severity: critical
+          component: consensus
+        annotations:
+          summary: "Block finalization has stalled"
+          description: "No blocks have been finalized in over 5 minutes"
+          action: "Check validator participation and attestation rate"
+
+      # Data Availability failures
+      - alert: DASubmissionCriticalFailure
+        expr: |
+          rate(ande_da_verifications_failed_total[5m]) 
+          / rate(ande_da_submissions_total[5m]) > 0.5
+        for: 3m
+        labels:
+          severity: critical
+          component: data_availability
+        annotations:
+          summary: "Over 50% of DA submissions are failing"
+          description: "Critical failure rate in Celestia DA layer: {{ $value | humanizePercentage }}"
+          action: "Check Celestia node health and network connectivity"
+
+      # Low validator participation
+      - alert: CriticalValidatorParticipation
+        expr: ande_validator_participation_rate_percent < 50
+        for: 10m
+        labels:
+          severity: critical
+          component: consensus
+        annotations:
+          summary: "Validator participation critically low"
+          description: "Only {{ $value }}% of validators are participating (need >67% for safety)"
+          action: "Contact offline validators immediately, check network issues"
+
+      # RPC endpoint completely down
+      - alert: RPCEndpointDown
+        expr: up{job="ande-node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: rpc
+        annotations:
+          summary: "RPC endpoint is completely down"
+          description: "Cannot reach ANDE node RPC endpoint"
+          action: "Restart node service, check Docker/systemd status"
+
+  # =============================================================================
+  # HIGH PRIORITY ALERTS - Action needed soon
+  # =============================================================================
+  - name: ande_high_priority
+    interval: 1m
+    rules:
+      # High parallel execution conflict rate
+      - alert: HighParallelConflictRate
+        expr: |
+          rate(ande_parallel_execution_conflicts_total[5m]) 
+          / rate(ande_parallel_execution_success_total[5m]) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          component: execution
+        annotations:
+          summary: "High parallel execution conflict rate"
+          description: "Conflict rate is {{ $value | humanizePercentage }} (threshold: 30%)"
+          action: "Consider reducing batch size or adjusting worker count"
+
+      # DA submission latency too high
+      - alert: HighDALatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(ande_da_submission_latency_seconds_bucket[5m])
+          ) > 30
+        for: 10m
+        labels:
+          severity: warning
+          component: data_availability
+        annotations:
+          summary: "DA submission latency is very high"
+          description: "P95 latency: {{ $value }}s (threshold: 30s)"
+          action: "Check Celestia network congestion, consider increasing batch size"
+
+      # Low validator participation (warning level)
+      - alert: LowValidatorParticipation
+        expr: ande_validator_participation_rate_percent < 67
+        for: 15m
+        labels:
+          severity: warning
+          component: consensus
+        annotations:
+          summary: "Validator participation below optimal"
+          description: "{{ $value }}% validators participating (optimal: >67%)"
+          action: "Monitor validator health, check for network issues"
+
+      # High finality time
+      - alert: SlowFinality
+        expr: |
+          histogram_quantile(0.95, 
+            rate(ande_finality_time_seconds_bucket[5m])
+          ) > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: consensus
+        annotations:
+          summary: "Block finality is slow"
+          description: "P95 finality time: {{ $value }}s (target: <5s)"
+          action: "Check network latency and validator performance"
+
+      # Excessive rate limiting
+      - alert: HighRateLimitRejections
+        expr: rate(ande_rpc_rate_limit_hits_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: rpc
+        annotations:
+          summary: "High number of rate limit rejections"
+          description: "{{ $value }} requests/sec being rate limited"
+          action: "Investigate if legitimate traffic spike or potential attack"
+
+      # Memory usage high
+      - alert: HighMemoryUsage
+        expr: |
+          (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) 
+          / node_memory_MemTotal_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Memory usage above 85%"
+          description: "Memory usage: {{ $value | humanizePercentage }}"
+          action: "Check for memory leaks, consider scaling up resources"
+
+      # Disk space low
+      - alert: LowDiskSpace
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/data"} 
+          / node_filesystem_size_bytes{mountpoint="/data"}) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "Disk space below 15%"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"
+          action: "Clean up old data or provision more storage"
+
+  # =============================================================================
+  # PERFORMANCE ALERTS - Optimization needed
+  # =============================================================================
+  - name: ande_performance
+    interval: 2m
+    rules:
+      # Low transaction throughput
+      - alert: LowTransactionThroughput
+        expr: ande_parallel_throughput_tps < 1000
+        for: 15m
+        labels:
+          severity: info
+          component: execution
+        annotations:
+          summary: "Transaction throughput is low"
+          description: "Current TPS: {{ $value }} (target: >5000 TPS)"
+          action: "Check if network is idle or investigate performance issues"
+
+      # MEV value extraction declining
+      - alert: NoMEVActivity
+        expr: rate(ande_mev_value_extracted_wei[1h]) == 0
+        for: 2h
+        labels:
+          severity: info
+          component: mev
+        annotations:
+          summary: "No MEV activity detected"
+          description: "No MEV bundles detected in last 2 hours"
+          action: "Verify MEV detection is working correctly"
+
+      # Peer count low
+      - alert: LowPeerCount
+        expr: ande_peer_count < 5
+        for: 10m
+        labels:
+          severity: warning
+          component: network
+        annotations:
+          summary: "Low peer count"
+          description: "Only {{ $value }} peers connected (recommended: >10)"
+          action: "Check network connectivity and firewall rules"
+
+      # High RPC latency
+      - alert: SlowRPCResponses
+        expr: |
+          histogram_quantile(0.95, 
+            rate(ande_rpc_request_duration_seconds_bucket[5m])
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: rpc
+        annotations:
+          summary: "RPC responses are slow"
+          description: "P95 RPC latency: {{ $value }}s (target: <1s)"
+          action: "Check database performance and optimize queries"
+
+  # =============================================================================
+  # SECURITY ALERTS - Potential security issues
+  # =============================================================================
+  - name: ande_security
+    interval: 1m
+    rules:
+      # Excessive failed connections
+      - alert: HighConnectionErrors
+        expr: rate(ande_network_connection_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High rate of connection errors"
+          description: "{{ $value }} connection errors per second"
+          action: "Investigate for potential DDoS or network attack"
+
+      # Unusual MEV auction activity
+      - alert: UnusualMEVActivity
+        expr: |
+          rate(ande_mev_bundles_detected_total[5m]) > 
+          2 * rate(ande_mev_bundles_detected_total[1h] offset 1h)
+        for: 10m
+        labels:
+          severity: info
+          component: security
+        annotations:
+          summary: "Unusual spike in MEV activity"
+          description: "MEV activity doubled compared to previous hour"
+          action: "Monitor for potential manipulation or attack"
+
+      # Multiple validator failures
+      - alert: MultipleValidatorFailures
+        expr: rate(ande_missed_slots_total[10m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Multiple validators missing slots"
+          description: "{{ $value }} missed slots in last 10 minutes"
+          action: "Check if validators are under attack or experiencing issues"
+
+  # =============================================================================
+  # DEADMAN SWITCH - Ensures monitoring is working
+  # =============================================================================
+  - name: ande_monitoring
+    interval: 5m
+    rules:
+      - alert: MonitoringHeartbeat
+        expr: vector(1)
+        labels:
+          severity: none
+          component: monitoring
+        annotations:
+          summary: "Monitoring system is alive"
+          description: "This alert fires every 5 minutes to confirm monitoring is working"
+
+      # Prometheus scrape failures
+      - alert: PrometheusScrapeFailure
+        expr: up{job="ande-node"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: monitoring
+        annotations:
+          summary: "Prometheus cannot scrape metrics"
+          description: "Scrape target {{ $labels.instance }} is down"
+          action: "Check if ande-node metrics endpoint is accessible"
+
+      # Too many alerts firing
+      - alert: TooManyAlerts
+        expr: count(ALERTS{alertstate="firing", severity!="none"}) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: monitoring
+        annotations:
+          summary: "Too many alerts firing simultaneously"
+          description: "{{ $value }} alerts are currently firing"
+          action: "Investigate systemic issues causing multiple alerts"

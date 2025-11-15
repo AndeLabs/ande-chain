@@ -1,0 +1,111 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/ande-primitives",
+    "crates/ande-consensus",
+    "crates/ande-evm",
+    "crates/ande-storage",
+    "crates/ande-rpc",
+    "crates/ande-network",
+    "crates/ande-node",
+    "crates/ande-cli",
+    "bindings",
+    "tools/generate-bindings",
+    "tests",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.83"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/AndeLabs/ande-chain"
+homepage = "https://andelabs.io"
+authors = ["Ande Labs Team"]
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+eyre = "0.6"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Networking
+jsonrpsee = { version = "0.24", features = ["server", "macros"] }
+jsonrpsee-core = "0.24"
+jsonrpsee-proc-macros = "0.24"
+
+# Reth dependencies - Using v1.8.2
+reth-payload-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-engine-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-consensus = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-consensus-common = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-ethereum-consensus = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-ethereum-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-evm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+
+# Alloy - Aligned with Reth v1.8.2 (version 1.0.37)
+alloy-primitives = { version = "1.0.37", default-features = false }
+alloy-sol-types = { version = "1.0.37", default-features = false }
+alloy-rlp = { version = "1.0.37", default-features = false }
+alloy-rpc-types-engine = { version = "1.0.37", default-features = false }
+alloy-eips = { version = "1.0.37", default-features = false }
+alloy-consensus = { version = "1.0.37", default-features = false }
+alloy-rpc-types-txpool = { version = "1.0.37", default-features = false }
+alloy-genesis = { version = "1.0.37", default-features = false }
+
+# REVM
+revm = "29.0.1"
+revm-precompile = "27.0.0"
+revm-handler = "10.0.1"
+revm-context-interface = "10.2.0"
+revm-interpreter = "15.1.0"
+
+# Internal crates
+ande-primitives = { path = "crates/ande-primitives" }
+ande-consensus = { path = "crates/ande-consensus" }
+ande-evm = { path = "crates/ande-evm" }
+
+[workspace.lints.rust]
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+unused_must_use = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+
+[profile.maxperf]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+opt-level = 3
