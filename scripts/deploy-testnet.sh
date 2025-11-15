@@ -34,8 +34,8 @@ LOG_FILE="${PROJECT_ROOT}/logs/deployment-$(date +%Y%m%d-%H%M%S).log"
 # Deployment constants
 MAX_RETRIES=3
 RETRY_DELAY=5
-MIN_BALANCE_TIA="0.1"  # Minimum balance required in TIA (Celestia Mocha-4)
-ESTIMATED_GAS_COST_TIA="0.05"  # Estimated gas cost for all deployments in TIA
+MIN_BALANCE_ANDE="0.1"  # Minimum balance required in ANDE (native token)
+ESTIMATED_GAS_COST_ANDE="0.05"  # Estimated gas cost for all deployments in ANDE
 
 # Create logs directory
 mkdir -p "${PROJECT_ROOT}/logs"
@@ -302,35 +302,37 @@ validate_balances() {
             continue
         fi
 
-        # Convert wei to TIA (Celestia uses 18 decimals like Ethereum)
-        local balance_tia=$(echo "scale=6; $balance_wei / 1000000000000000000" | bc)
+        # Convert wei to ANDE (18 decimals)
+        local balance_ande=$(echo "scale=6; $balance_wei / 1000000000000000000" | bc)
 
-        log_success "$name balance: $balance_tia TIA"
+        log_success "$name balance: $balance_ande ANDE"
 
-        # Check if balance is sufficient for Celestia Mocha-4 deployment
-        if (( $(echo "$balance_tia < $MIN_BALANCE_TIA" | bc -l) )); then
-            log_warning "$name balance ($balance_tia TIA) is below recommended minimum ($MIN_BALANCE_TIA TIA)"
-            log_warning "Deployment may fail due to insufficient gas on Celestia Mocha-4"
+        # Check if balance is sufficient for ANDE Chain deployment
+        if (( $(echo "$balance_ande < $MIN_BALANCE_ANDE" | bc -l) )); then
+            log_warning "$name balance ($balance_ande ANDE) is below recommended minimum ($MIN_BALANCE_ANDE ANDE)"
+            log_warning "Deployment may fail due to insufficient gas on ANDE Chain"
         fi
     done
 
     if [ "$all_funded" = false ]; then
-        log_error "One or more wallets are not funded with TIA!"
+        log_error "One or more wallets have ZERO ANDE balance!"
         log_error ""
-        log_error "To fund wallets with TIA (Celestia Mocha-4 testnet), visit:"
-        log_error "  • Celestia Mocha-4 faucet: https://faucet.celestia-mocha.com/"
+        log_error "ANDE Chain Architecture:"
+        log_error "  • Sovereign Rollup with EVM execution"
+        log_error "  • Consensus contracts deployed ON ANDE CHAIN"
+        log_error "  • Gas paid with ANDE token (dual-token)"
+        log_error "  • Celestia used ONLY for Data Availability (DA blobs)"
         log_error ""
-        log_error "Wallet addresses to fund:"
+        log_error "Wallet addresses (need ANDE token):"
         log_error "  1. $SEQUENCER_1_ADDRESS"
         log_error "  2. $SEQUENCER_2_ADDRESS"
         log_error "  3. $SEQUENCER_3_ADDRESS"
         log_error ""
-        log_error "Note: ANDE Chain is a sovereign rollup with dual-token (ANDE)."
-        log_error "For consensus contracts deployment on Celestia Mocha-4, TIA is required."
+        log_error "These wallets should have ANDE from genesis allocation or faucet."
         exit 1
     fi
 
-    log_success "All wallets have sufficient TIA balance for Celestia Mocha-4 deployment"
+    log_success "All wallets have sufficient ANDE balance for deployment"
 }
 
 # Compile Rust code
@@ -577,7 +579,8 @@ deployment_summary() {
     echo ""
     echo "📅 Deployment Date: $(date '+%Y-%m-%d %H:%M:%S')"
     echo "⏱️  Duration: ${duration}s"
-    echo "📍 Network: Celestia Mocha-4"
+    echo "📍 Network: ANDE Chain (Sovereign Rollup)"
+    echo "🔗 Data Availability: Celestia Mocha-4"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  Deployed Smart Contracts"
@@ -647,10 +650,11 @@ main() {
 
     echo ""
     echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║      ANDE Chain Production Testnet Deployment - Mocha-4       ║"
+    echo "║    ANDE Chain Sovereign Rollup - Multi-Sequencer Deployment   ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo ""
-    log_info "Starting production-grade deployment to Celestia Mocha-4..."
+    log_info "ANDE Chain: Sovereign Rollup EVM with Celestia DA"
+    log_info "Deploying consensus contracts to ANDE Chain (not Celestia)"
     log_info "Log file: $LOG_FILE"
     echo ""
 
