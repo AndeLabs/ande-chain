@@ -231,49 +231,39 @@ async fn run_node() -> Result<()> {
     }
 }
 
-/// Build ANDE chain specification
+/// Build ANDE chain specification from genesis.json file
 fn build_ande_chain_spec() -> Result<Arc<ChainSpec>> {
-    // Create genesis configuration as JSON
-    let genesis_json = serde_json::json!({
-        "config": {
-            "chainId": CHAIN_ID,
-            "homesteadBlock": 0,
-            "eip150Block": 0,
-            "eip155Block": 0,
-            "eip158Block": 0,
-            "byzantiumBlock": 0,
-            "constantinopleBlock": 0,
-            "petersburgBlock": 0,
-            "istanbulBlock": 0,
-            "berlinBlock": 0,
-            "londonBlock": 0,
-            "shanghaiTime": 0,
-            "cancunTime": 0,
-        },
-        "alloc": {
-            // ANDE Token Duality Precompile at 0x00...fd
-            // This precompile enables ANDE tokens to function as both:
-            // 1. Native gas token (for paying transaction fees)
-            // 2. ERC-20 standard token (for DeFi applications)
-            // Security: allow-list validation, per-call caps, per-block caps
-            "0x00000000000000000000000000000000000000fd": {
-                "balance": "0x0"
-            },
-            // Initial allocations for testing
-            "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
-                "balance": "0x3635c9adc5dea00000" // 1000 ETH (1000 * 10^18 wei)
-            }
-        },
-        "gasLimit": "0x1c9c380", // 30M gas
-        "difficulty": "0x0",
-        "nonce": "0x0",
-        "timestamp": "0x654c9d80",
-        "baseFeePerGas": "0x3b9aca00" // 1 gwei
-    });
+    // Load genesis from standard location: specs/genesis.json
+    let genesis_path = std::env::var("GENESIS_PATH")
+        .unwrap_or_else(|_| "specs/genesis.json".to_string());
 
-    // Deserialize JSON into Genesis struct
-    let genesis: Genesis = serde_json::from_value(genesis_json)
+    info!("Loading genesis from: {}", genesis_path);
+
+    // Read genesis file
+    let genesis_content = std::fs::read_to_string(&genesis_path)
+        .map_err(|e| eyre::eyre!("Failed to read genesis file {}: {}", genesis_path, e))?;
+
+    // Parse genesis JSON
+    let genesis: Genesis = serde_json::from_str(&genesis_content)
         .map_err(|e| eyre::eyre!("Failed to parse genesis JSON: {}", e))?;
+
+    // Verify chain ID matches
+    if genesis.config.chain_id != CHAIN_ID {
+        error!(
+            "Genesis chain ID mismatch: expected {}, got {}",
+            CHAIN_ID, genesis.config.chain_id
+        );
+        return Err(eyre::eyre!(
+            "Chain ID mismatch: expected {}, got {}",
+            CHAIN_ID,
+            genesis.config.chain_id
+        ));
+    }
+
+    info!("✅ Genesis loaded successfully");
+    info!("   Chain ID: {}", genesis.config.chain_id);
+    info!("   Accounts: {}", genesis.alloc.len());
+    info!("   Gas Limit: {}", genesis.gas_limit);
 
     // Build chain spec with Genesis struct
     let spec = ChainSpecBuilder::default()

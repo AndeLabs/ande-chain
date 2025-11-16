@@ -71,6 +71,7 @@ services:
       - sequencer-1-data:/data/ande-chain
       - sequencer-1-logs:/logs
       - jwttoken:/data/jwt:ro
+      - ./specs/genesis.json:/genesis.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8545"]
       interval: 30s
@@ -107,6 +108,7 @@ services:
       - sequencer-2-data:/data/ande-chain
       - sequencer-2-logs:/logs
       - jwttoken:/data/jwt:ro
+      - ./specs/genesis.json:/genesis.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8545"]
       interval: 30s
@@ -143,6 +145,7 @@ services:
       - sequencer-3-data:/data/ande-chain
       - sequencer-3-logs:/logs
       - jwttoken:/data/jwt:ro
+      - ./specs/genesis.json:/genesis.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8545"]
       interval: 30s

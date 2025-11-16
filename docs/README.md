@@ -1,26 +1,61 @@
-# Ande Chain Documentation
+# ANDE Chain Documentation
 
-## Table of Contents
+Official documentation for ANDE Chain - Sovereign Rollup with Reth.
 
-### Architecture
-- [Overview](architecture/overview.md)
-- [Consensus Mechanism](architecture/consensus.md)
-- [EVM Customizations](architecture/evm.md)
-- [Precompiles](architecture/precompiles.md)
+## 📚 Active Documentation
 
-### Developer Guide
-- [Getting Started](developer/getting-started.md)
-- [Building](developer/building.md)
-- [Testing](developer/testing.md)
-- [Contributing](developer/contributing.md)
+### Genesis & Chain Initialization
 
-### Deployment
-- [Node Setup](deployment/node-setup.md)
-- [Validator Setup](deployment/validator-setup.md)
-- [Docker](deployment/docker.md)
-- [Kubernetes](deployment/kubernetes.md)
+- **[GENESIS_WORKFLOW.md](./GENESIS_WORKFLOW.md)** - ⭐ **START HERE**
+  - Flujo estándar de Reth para crear genesis
+  - Método híbrido: Seeds on-chain + Celestia DA
+  - Comandos y configuración
 
-### API Reference
-- [RPC API](api/rpc.md)
-- [Contract Interfaces](api/contracts.md)
-- [CLI](api/cli.md)
+- **[GENESIS_CULTURAL_REFERENCES.md](./GENESIS_CULTURAL_REFERENCES.md)**
+  - Easter eggs culturales en el genesis
+  - Términos quechua y su significado
+  - Verificación on-chain
+
+### Celestia Integration
+
+- **[CELESTIA_INTEGRATION_ARCHITECTURE.md](./CELESTIA_INTEGRATION_ARCHITECTURE.md)**
+  - Integración con Celestia Matcha v6
+  - Arquitectura de blob uploader
+  - Costos y especificaciones técnicas
+
+## 🗂️ Archived Documentation
+
+Documentación antigua movida a \`docs/archive/\`:
+
+- \`GENESIS_DNA_OPTIONS.md\` - Opciones de diseño evaluadas (DEPRECATED)
+- \`MAXIMAL_GENESIS_DESIGN.md\` - Diseño maximalista (DEPRECATED)
+- \`DIGITAL_DNA_ARCHITECTURE.md\` - Arquitectura NFT inicial (DEPRECATED)
+
+**⚠️ NO usar estos documentos - solo para referencia histórica**
+
+## 🚀 Quick Start
+
+### 1. Generar Genesis
+
+\`\`\`bash
+# Generar seeds de 520 plantas
+python3 scripts/generate-genesis-seeds.py
+
+# Verificar genesis.json
+cat specs/genesis.json | jq '.alloc["0x0000000000000000000000000000000000000001"].storage | keys | length'
+\`\`\`
+
+### 2. Iniciar Node
+
+\`\`\`bash
+# Compilar
+cargo build --release -p ande-node
+
+# Ejecutar (carga specs/genesis.json automáticamente)
+cargo run --release -p ande-node
+\`\`\`
+
+---
+
+**Last Updated**: 2025-11-15
+**Maintainer**: ANDE Labs Team

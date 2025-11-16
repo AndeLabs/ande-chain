@@ -1,0 +1,74 @@
+{
+  "1": {
+    "scientificName": "Lophophora williamsii",
+    "seed": "0x35a2a6d03ee094cb624310ec6e09d7b1fb176e068dc74b0fb81fe6828c0f6fda",
+    "proof": [
+      "0xa7398481d3624783e8604d18bd94829dd373a767106701e9c79519ed017f028f",
+      "0x654d402999e2b725e15f1101df9b5139f2828b4994f030a6eb3faf4300b5ea6c",
+      "0x26f833209cb6f666a81d61cc326bd6e4484792eeb94aa940fe214598869f3a32"
+    ]
+  },
+  "2": {
+    "scientificName": "Cannabis sativa",
+    "seed": "0xa7398481d3624783e8604d18bd94829dd373a767106701e9c79519ed017f028f",
+    "proof": [
+      "0x35a2a6d03ee094cb624310ec6e09d7b1fb176e068dc74b0fb81fe6828c0f6fda",
+      "0x654d402999e2b725e15f1101df9b5139f2828b4994f030a6eb3faf4300b5ea6c",
+      "0x26f833209cb6f666a81d61cc326bd6e4484792eeb94aa940fe214598869f3a32"
+    ]
+  },
+  "3": {
+    "scientificName": "Banisteriopsis caapi",
+    "seed": "0xd32e39163be5a0b41e2bab27be079806742902fcb9c0a48ab3ffdc78c49db195",
+    "proof": [
+      "0x9547a7d17791213158b5dad89863d96b619018cd40e3f95d8827993ba1f40dbf",
+      "0x0280ea0b759f19d41312401ec398a840683771b099fc3bd0d35206bcd5e58ed1",
+      "0x26f833209cb6f666a81d61cc326bd6e4484792eeb94aa940fe214598869f3a32"
+    ]
+  },
+  "4": {
+    "scientificName": "Erythroxylum coca",
+    "seed": "0x9547a7d17791213158b5dad89863d96b619018cd40e3f95d8827993ba1f40dbf",
+    "proof": [
+      "0xd32e39163be5a0b41e2bab27be079806742902fcb9c0a48ab3ffdc78c49db195",
+      "0x0280ea0b759f19d41312401ec398a840683771b099fc3bd0d35206bcd5e58ed1",
+      "0x26f833209cb6f666a81d61cc326bd6e4484792eeb94aa940fe214598869f3a32"
+    ]
+  },
+  "5": {
+    "scientificName": "Psilocybe cubensis",
+    "seed": "0xde21b0a699c5a943f1005af54cb2cf625e572064abcfc7728c9c48c1d66ef6b2",
+    "proof": [
+      "0x6908e730c691e458effff292a3cd3c5a3227701428076106bf3d9be3aca10863",
+      "0x6c79f8e23c081e50d661805b509123d0caf0d43a999b21c1a97dd59debfe2c82",
+      "0x24ae53518766415ca8ce2a6e31e641c907ce9e4e2aa440d012b8984231df1d62"
+    ]
+  },
+  "6": {
+    "scientificName": "Salvia divinorum",
+    "seed": "0x6908e730c691e458effff292a3cd3c5a3227701428076106bf3d9be3aca10863",
+    "proof": [
+      "0xde21b0a699c5a943f1005af54cb2cf625e572064abcfc7728c9c48c1d66ef6b2",
+      "0x6c79f8e23c081e50d661805b509123d0caf0d43a999b21c1a97dd59debfe2c82",
+      "0x24ae53518766415ca8ce2a6e31e641c907ce9e4e2aa440d012b8984231df1d62"
+    ]
+  },
+  "7": {
+    "scientificName": "Brugmansia arborea",
+    "seed": "0xb0a06fbb1be44392e59c3ad6a56ef1e0a0e76a1e4f61a4ad19a69f44e946dd59",
+    "proof": [
+      "0x24c28ccb6405726c29a9662b39381d63e79577c5f3e153d015dc7c7124721eba",
+      "0xe4f0c6849486e3df6953c5ec3fc1dde527a4fed751f2961385114f4a2bbdaff0",
+      "0x24ae53518766415ca8ce2a6e31e641c907ce9e4e2aa440d012b8984231df1d62"
+    ]
+  },
+  "8": {
+    "scientificName": "Anadenanthera peregrina",
+    "seed": "0x24c28ccb6405726c29a9662b39381d63e79577c5f3e153d015dc7c7124721eba",
+    "proof": [
+      "0xb0a06fbb1be44392e59c3ad6a56ef1e0a0e76a1e4f61a4ad19a69f44e946dd59",
+      "0xe4f0c6849486e3df6953c5ec3fc1dde527a4fed751f2961385114f4a2bbdaff0",
+      "0x24ae53518766415ca8ce2a6e31e641c907ce9e4e2aa440d012b8984231df1d62"
+    ]
+  }
+}

@@ -1,0 +1,263 @@
+{
+  "version": "1.0.0",
+  "totalPlants": 8,
+  "generatedAt": 1763246500,
+  "merkleRoot": "0xf6d3d1c1e67cf5a30a1ee9a6b087bbd00e33604c0678147f6835783597c84e7b",
+  "plants": [
+    {
+      "plant_id": 1,
+      "scientific_name": "Lophophora williamsii",
+      "common_names": [
+        "Peyote",
+        "Hikuri",
+        "Mescal Button"
+      ],
+      "genus": "Lophophora",
+      "family": "Cactaceae",
+      "ncbi_code": "NC030453",
+      "properties": [
+        "psychoactive",
+        "entheogenic",
+        "hallucinogenic",
+        "medicinal",
+        "ceremonial"
+      ],
+      "conservation_status": "VU",
+      "rarity_tier": 3,
+      "seed": "0x35a2a6d03ee094cb624310ec6e09d7b1fb176e068dc74b0fb81fe6828c0f6fda",
+      "traits": [
+        120,
+        15,
+        69,
+        2,
+        180,
+        101,
+        113,
+        20
+      ]
+    },
+    {
+      "plant_id": 2,
+      "scientific_name": "Cannabis sativa",
+      "common_names": [
+        "Marijuana",
+        "Hemp",
+        "Cannabis",
+        "Ganja"
+      ],
+      "genus": "Cannabis",
+      "family": "Cannabaceae",
+      "ncbi_code": "NC044371",
+      "properties": [
+        "psychoactive",
+        "medicinal",
+        "analgesic",
+        "anti-inflammatory"
+      ],
+      "conservation_status": "LC",
+      "rarity_tier": 2,
+      "seed": "0xa7398481d3624783e8604d18bd94829dd373a767106701e9c79519ed017f028f",
+      "traits": [
+        173,
+        14,
+        80,
+        101,
+        67,
+        199,
+        106,
+        62
+      ]
+    },
+    {
+      "plant_id": 3,
+      "scientific_name": "Banisteriopsis caapi",
+      "common_names": [
+        "Ayahuasca",
+        "Yage",
+        "Caapi",
+        "Vine of the Soul"
+      ],
+      "genus": "Banisteriopsis",
+      "family": "Malpighiaceae",
+      "ncbi_code": "NC051087",
+      "properties": [
+        "psychoactive",
+        "entheogenic",
+        "visionary",
+        "medicinal",
+        "ceremonial"
+      ],
+      "conservation_status": "LC",
+      "rarity_tier": 3,
+      "seed": "0xd32e39163be5a0b41e2bab27be079806742902fcb9c0a48ab3ffdc78c49db195",
+      "traits": [
+        40,
+        145,
+        130,
+        95,
+        172,
+        207,
+        116,
+        80
+      ]
+    },
+    {
+      "plant_id": 4,
+      "scientific_name": "Erythroxylum coca",
+      "common_names": [
+        "Coca",
+        "Hoja de Coca",
+        "Mama Coca"
+      ],
+      "genus": "Erythroxylum",
+      "family": "Erythroxylaceae",
+      "ncbi_code": "NC040990",
+      "properties": [
+        "stimulant",
+        "medicinal",
+        "traditional",
+        "sacred"
+      ],
+      "conservation_status": "LC",
+      "rarity_tier": 3,
+      "seed": "0x9547a7d17791213158b5dad89863d96b619018cd40e3f95d8827993ba1f40dbf",
+      "traits": [
+        48,
+        213,
+        60,
+        54,
+        235,
+        40,
+        97,
+        182
+      ]
+    },
+    {
+      "plant_id": 5,
+      "scientific_name": "Psilocybe cubensis",
+      "common_names": [
+        "Magic Mushroom",
+        "Golden Teacher",
+        "Teonanacatl"
+      ],
+      "genus": "Psilocybe",
+      "family": "Hymenogastraceae",
+      "ncbi_code": "JAAVMF01",
+      "properties": [
+        "psychoactive",
+        "entheogenic",
+        "hallucinogenic",
+        "ceremonial"
+      ],
+      "conservation_status": "LC",
+      "rarity_tier": 2,
+      "seed": "0xde21b0a699c5a943f1005af54cb2cf625e572064abcfc7728c9c48c1d66ef6b2",
+      "traits": [
+        117,
+        170,
+        161,
+        59,
+        168,
+        106,
+        34,
+        252
+      ]
+    },
+    {
+      "plant_id": 6,
+      "scientific_name": "Salvia divinorum",
+      "common_names": [
+        "Salvia",
+        "Ska Maria Pastora",
+        "Diviner's Sage"
+      ],
+      "genus": "Salvia",
+      "family": "Lamiaceae",
+      "ncbi_code": "MH286334",
+      "properties": [
+        "psychoactive",
+        "dissociative",
+        "visionary",
+        "ceremonial"
+      ],
+      "conservation_status": "EN",
+      "rarity_tier": 3,
+      "seed": "0x6908e730c691e458effff292a3cd3c5a3227701428076106bf3d9be3aca10863",
+      "traits": [
+        144,
+        78,
+        217,
+        6,
+        105,
+        60,
+        120,
+        72
+      ]
+    },
+    {
+      "plant_id": 7,
+      "scientific_name": "Brugmansia arborea",
+      "common_names": [
+        "Floripondio",
+        "Angel's Trumpet",
+        "Borrachero"
+      ],
+      "genus": "Brugmansia",
+      "family": "Solanaceae",
+      "ncbi_code": "NC",
+      "properties": [
+        "psychoactive",
+        "toxic",
+        "entheogenic",
+        "medicinal",
+        "ceremonial"
+      ],
+      "conservation_status": "VU",
+      "rarity_tier": 3,
+      "seed": "0xb0a06fbb1be44392e59c3ad6a56ef1e0a0e76a1e4f61a4ad19a69f44e946dd59",
+      "traits": [
+        179,
+        85,
+        101,
+        201,
+        81,
+        250,
+        47,
+        235
+      ]
+    },
+    {
+      "plant_id": 8,
+      "scientific_name": "Anadenanthera peregrina",
+      "common_names": [
+        "Yopo",
+        "Cohoba",
+        "Vilca",
+        "Cebil"
+      ],
+      "genus": "Anadenanthera",
+      "family": "Fabaceae",
+      "ncbi_code": "NC",
+      "properties": [
+        "psychoactive",
+        "entheogenic",
+        "hallucinogenic",
+        "traditional",
+        "ceremonial"
+      ],
+      "conservation_status": "LC",
+      "rarity_tier": 3,
+      "seed": "0x24c28ccb6405726c29a9662b39381d63e79577c5f3e153d015dc7c7124721eba",
+      "traits": [
+        104,
+        147,
+        136,
+        177,
+        163,
+        83,
+        195,
+        139
+      ]
+    }
+  ]
+}

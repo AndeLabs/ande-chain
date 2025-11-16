@@ -1,0 +1,7 @@
+{
+  "node_url": "http://localhost:26658",
+  "auth_token": null,
+  "network": "mainnet",
+  "parallel_workers": 8,
+  "retry_attempts": 3
+}

@@ -1,0 +1,47 @@
+[package]
+name = "celestia-uploader"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Production-grade Celestia blob uploader for ANDE Chain genesis data"
+
+[[bin]]
+name = "upload-genesis"
+path = "src/bin/upload-genesis.rs"
+
+[dependencies]
+# Celestia integration (Matcha v6 compatible)
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+
+# Async runtime
+tokio.workspace = true
+futures = "0.3"
+
+# Cryptography
+sha2.workspace = true
+sha3.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow = "1.0"
+
+# Utilities
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Random sampling for DA verification
+rand = "0.8"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockito = "1.2"
