@@ -50,8 +50,8 @@ RUN rustup toolchain install nightly && \
 # Configure Rust for MAXIMUM performance (Reth best practices)
 # - target-cpu=native: Optimize for build machine CPU (use x86-64-v3 for portability)
 # - link-arg=-fuse-ld=lld: Use LLVM's fast linker
-# - embed-bitcode=no: Reduce build time
-ENV RUSTFLAGS="-C target-cpu=native -C link-arg=-fuse-ld=lld -C embed-bitcode=no"
+# Note: embed-bitcode removed to allow LTO (required by maxperf profile)
+ENV RUSTFLAGS="-C target-cpu=native -C link-arg=-fuse-ld=lld"
 ENV CARGO_BUILD_JOBS=8
 ENV CARGO_INCREMENTAL=0
 ENV CARGO_NET_RETRY=10
