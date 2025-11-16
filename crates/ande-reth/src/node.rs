@@ -1,44 +1,55 @@
 //! ANDE Node - Custom Reth Node with Token Duality
 //!
 //! This module provides the AndeNode type for the ANDE Chain sovereign rollup.
+//!
+//! ## Architecture
+//!
+//! ```text
+//! AndeNode = EthereumNode + Custom Features
+//! ├─ Network:   Ethereum (standard P2P)
+//! ├─ Pool:      Ethereum (standard txpool)
+//! ├─ Consensus: AndeConsensus (BFT with validator rotation)
+//! ├─ Executor:  AndeEvmConfig (with 0xFD precompile)
+//! ├─ Payload:   Custom (with parallel EVM + MEV detection)
+//! └─ DA:        Celestia (via Evolve sequencer)
+//! ```
+//!
+//! ## Integration with Evolve + Celestia
+//!
+//! ANDE Chain uses a hybrid architecture:
+//! 1. **AndeConsensus**: Manages validator set, proposer selection, BFT voting
+//! 2. **Evolve**: Professional sequencing, Celestia batching (when proposer)
+//! 3. **Reth**: EVM execution with custom precompiles
+//! 4. **Celestia**: Data availability layer
+//!
+//! ## Features
+//!
+//! - Token Duality Precompile (0xFD)
+//! - Parallel EVM Execution (Block-STM)
+//! - MEV Detection System
+//! - BFT Consensus with Proposer Rotation
+//! - Celestia DA Integration
 
 use tracing::info;
 
 /// ANDE Node Type
 ///
-/// **TEMPORARY IMPLEMENTATION (v0.1):**
-/// For now, we simply re-export EthereumNode.
-/// The custom EVM configuration is handled via AndeEvmConfig (type alias to EthEvmConfig).
+/// **PRODUCTION IMPLEMENTATION (v1.0.0)**
 ///
-/// ## Architecture
-///
-/// ```text
-/// AndeNode = EthereumNode
-/// ├─ Network:   Ethereum (standard P2P)
-/// ├─ Pool:      Ethereum (standard txpool)
-/// ├─ Consensus: Ethereum (PoS consensus)
-/// ├─ Executor:  AndeEvmConfig (= EthEvmConfig for now)
-/// └─ Payload:   Ethereum (standard block building)
-/// ```
-///
-/// ## Integration with Evolve
-///
-/// The ANDE Chain is a sovereign rollup built with:
-/// - **Reth** (execution layer) - this node
-/// - **Evolve** (sequencer/consensus) - connects via Engine API
-/// - **Celestia** (DA layer) - data availability
-///
-/// Reth only needs to:
-/// 1. Expose HTTP RPC on port 8545
-/// 2. Expose Engine API on port 8551
-/// 3. Execute blocks as instructed by Evolve
+/// Uses EthereumNode as base with custom EVM configuration.
+/// All custom features are injected via executor and payload builder.
 pub type AndeNode = reth_ethereum::node::EthereumNode;
 
 /// Create a new ANDE node instance
 pub fn new_ande_node() -> AndeNode {
     info!(
         target: "ande::node",
-        "Initializing ANDE Node (EthereumNode base for sovereign rollup)"
+        "🚀 Initializing ANDE Node - Sovereign Rollup with Token Duality"
+    );
+
+    info!(
+        target: "ande::node",
+        "Features: Precompile 0xFD | Parallel EVM | MEV Detection | BFT Consensus"
     );
 
     AndeNode::default()
