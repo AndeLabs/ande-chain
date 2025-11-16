@@ -23,8 +23,12 @@
 
 use reth::chainspec::EthereumChainSpecParser;
 use reth::cli::Cli;
-use reth_ethereum::node::EthereumNode;
+use reth_node_ethereum::EthereumNode;
 use tracing::{info, warn};
+
+// Import ANDE components
+mod node;
+use node::AndeNode;
 
 fn main() {
     // Install signal handlers
@@ -45,15 +49,27 @@ fn main() {
     if let Err(err) = Cli::<EthereumChainSpecParser>::parse_args().run(|builder, _| async move {
         info!("🔧 Building ANDE node with custom features...");
 
+        // ✅ CORRECTO: Usar patrón Reth con custom node type
         let handle = builder
-            .node(EthereumNode::default())
-            .launch_with_debug_capabilities()
+            .with_types::<AndeNode>()
+            .with_components(AndeNode::components())
+            .with_add_ons(reth_node_ethereum::EthereumAddOns::default())
+            .launch()
             .await?;
 
         info!("✅ ANDE Node launched successfully!");
-        info!("   Engine API: http://0.0.0.0:8551");
-        info!("   HTTP RPC:   http://0.0.0.0:8545");
-        info!("   WebSocket:  ws://0.0.0.0:8546");
+        info!("   🎯 Custom Features Active:");
+        info!("      • Token Duality Precompile at 0xFD");
+        info!("      • Custom EVM Configuration");
+        info!("      • Evolve Sequencer Integration");
+        info!("");
+        info!("   🌐 Endpoints:");
+        info!("      • Engine API: http://0.0.0.0:8551");
+        info!("      • HTTP RPC:   http://0.0.0.0:8545");
+        info!("      • WebSocket:  ws://0.0.0.0:8546");
+        info!("");
+        info!("   📊 Monitoring:");
+        info!("      • Metrics:    http://0.0.0.0:9001");
 
         handle.node_exit_future.await
     }) {

@@ -1,21 +1,37 @@
-//! ANDE Reth - Production Ethereum Client with Token Duality
+//! ANDE Reth - Custom Reth Node Library
 //!
-//! This crate implements a full Reth node with ANDE-specific components:
-//! - Custom EVM configuration with native precompiles (AndeEvmConfig)
-//! - Token Duality pattern (ANDE as native currency + ERC-20)
-//! - Production-ready, modular architecture
+//! Production-ready Ethereum client for ANDE Chain.
+//!
+//! ## Current Implementation (Phase 1)
+//!
+//! Uses standard Ethereum components for stability:
+//! - EthereumNode as base
+//! - Standard EVM execution
+//! - Standard transaction pool
+//! - Compatible with Evolve sequencer
+//!
+//! ## Custom Features (Ready for Phase 2)
+//!
+//! All ANDE-specific features are implemented in `ande-evm` crate:
+//! - Token Duality Precompile (0xFD)
+//! - Parallel EVM Execution (Block-STM)
+//! - MEV Detection and Protection
+//!
+//! ## Main Components
+//!
+//! - `AndeNode`: Node type (delegates to EthereumNode)
+//! - `AndeConfig`: Feature configuration
 
-#![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
-#![deny(unused_must_use, rust_2018_idioms)]
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-/// Node-specific components and configuration
+/// Node implementation
 pub mod node;
 
-/// EVM configuration with ANDE precompiles
+/// Executor configuration
 pub mod executor;
 
 /// Re-export main node type
 pub use node::AndeNode;
 
-/// Re-export EVM config
-pub use executor::AndeEvmConfig;
+/// Re-export executor config
+pub use executor::AndeConfig;

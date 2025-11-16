@@ -25,11 +25,15 @@ reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v
 reth-node-api = { workspace = true }
 reth-chainspec = { workspace = true }
 reth-primitives = { workspace = true }
+reth-provider = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
 reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-ethereum-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-ethereum-engine-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
 reth-ethereum-payload-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
 reth-evm = { workspace = true }
 reth-evm-ethereum = { workspace = true }
 reth-payload-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-payload-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
 reth-cli-util = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
 
 # Alloy
