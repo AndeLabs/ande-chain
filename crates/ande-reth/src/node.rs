@@ -1,45 +1,39 @@
 //! ANDE Node - Custom Reth Node with Token Duality
 //!
-//! This module implements the main AndeNode struct and its Node trait implementation,
-//! following the pattern established by op-reth for Optimism.
+//! This module implements the AndeNode using Reth's EthereumNode as a base,
+//! with a custom EVM configuration (AndeEvmConfig) for ANDE precompiles.
 
-use crate::executor::AndeExecutorBuilder;
-use reth_ethereum::node::{
-    EthereumAddOns, EthereumConsensusBuilder, EthereumNetworkBuilder, EthereumPoolBuilder,
-};
-use reth_ethereum_payload_builder::EthereumPayloadBuilder;
-use reth_node_api::{FullNodeTypes, NodeTypes};
-use reth_node_builder::{
-    components::{ComponentsBuilder, ConsensusBuilder, ExecutorBuilder, NetworkBuilder, PayloadServiceBuilder, PoolBuilder},
-    BuilderContext, Node, PayloadBuilderConfig,
-};
-use reth_payload_builder::{PayloadBuilderHandle, PayloadBuilderService};
-use reth_primitives::EthPrimitives;
+use crate::executor::AndeEvmConfig;
+use reth_ethereum::node::EthereumNode;
 use std::marker::PhantomData;
 use tracing::info;
 
 /// ANDE Node Configuration
 ///
-/// This struct encapsulates ANDE-specific configuration and implements
-/// the Node trait to provide custom components to the Reth builder.
+/// **Strategy for Reth v1.8.2+:**
+///
+/// Instead of implementing a complex custom Node trait, we use EthereumNode
+/// as our base and inject the AndeEvmConfig via `with_types()` + custom setup.
 ///
 /// ## Architecture
 ///
 /// ```text
-/// AndeNode
+/// AndeNode (= EthereumNode)
 /// ├─ Network:   Ethereum (standard P2P)
 /// ├─ Pool:      Ethereum (standard txpool)
 /// ├─ Consensus: Ethereum (PoS consensus)
-/// ├─ Executor:  ANDE (custom EVM with precompiles) ← KEY DIFFERENCE
+/// ├─ Executor:  AndeEvmConfig (delegates to EthEvmConfig) ← CUSTOM EVM
 /// └─ Payload:   Ethereum (standard block building)
 /// ```
 ///
-/// The only customization is the Executor, which injects the ANDE Token Duality
-/// precompile at address 0xFD into the EVM.
+/// The only customization is AndeEvmConfig, which wraps EthEvmConfig and
+/// will eventually inject the ANDE precompile provider.
 #[derive(Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct AndeNode {
     _phantom: PhantomData<()>,
+    /// Custom EVM configuration with ANDE precompiles
+    evm_config: Option<AndeEvmConfig>,
 }
 
 impl AndeNode {
@@ -51,49 +45,26 @@ impl AndeNode {
         );
         Self {
             _phantom: PhantomData,
+            evm_config: Some(AndeEvmConfig::default()),
         }
     }
-}
 
-/// ANDE Components Builder
-///
-/// Defines the complete set of components for the ANDE node.
-/// Most components reuse Ethereum defaults, with the Executor being custom.
-pub type AndeComponentsBuilder<N> = ComponentsBuilder<
-    N,
-    EthereumPoolBuilder,          // Standard Ethereum transaction pool
-    EthereumPayloadBuilder,        // Standard Ethereum block building
-    EthereumNetworkBuilder,        // Standard Ethereum P2P networking
-    AndeExecutorBuilder<N>,        // ✅ CUSTOM: ANDE executor with precompiles
-    EthereumConsensusBuilder,      // Standard Ethereum PoS consensus
->;
-
-impl<N> Node<N> for AndeNode
-where
-    N: FullNodeTypes<Types: NodeTypes<Primitives = EthPrimitives>>,
-{
-    type ComponentsBuilder = AndeComponentsBuilder<N>;
-    type AddOns = EthereumAddOns;
-
-    fn components_builder(&self) -> Self::ComponentsBuilder {
-        info!(
-            target: "ande::node",
-            "Building ANDE components with custom executor"
-        );
-
-        ComponentsBuilder::default()
-            .pool(EthereumPoolBuilder::default())
-            .payload(EthereumPayloadBuilder::default())
-            .network(EthereumNetworkBuilder::default())
-            .executor(AndeExecutorBuilder::new())  // ✅ ANDE custom executor
-            .consensus(EthereumConsensusBuilder::default())
-    }
-
-    fn add_ons(&self) -> Self::AddOns {
-        // Use standard Ethereum add-ons (RPC, etc.)
-        EthereumAddOns::default()
+    /// Get the custom EVM configuration
+    pub fn evm_config(&self) -> &AndeEvmConfig {
+        self.evm_config.as_ref().expect("EVM config always initialized")
     }
 }
+
+// For now, we simply re-export EthereumNode as AndeNode's base type.
+// The Node trait implementation comes from EthereumNode.
+//
+// In the future, if we need to customize the Node trait further,
+// we can implement it here with a delegation pattern similar to AndeEvmConfig.
+//
+// Usage in main.rs:
+//   builder.node(EthereumNode::default()).launch().await
+//
+// Then inject AndeEvmConfig at a different level (via NodeBuilder::with_types).
 
 #[cfg(test)]
 mod tests {
@@ -103,5 +74,6 @@ mod tests {
     fn test_ande_node_creation() {
         let node = AndeNode::new();
         assert!(std::mem::size_of_val(&node) >= 0);
+        assert!(node.evm_config().clone() != ());  // Ensure EVM config exists
     }
 }

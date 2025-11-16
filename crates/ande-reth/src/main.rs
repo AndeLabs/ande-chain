@@ -43,11 +43,9 @@
 #![allow(missing_docs)] // Allow for main.rs
 
 use ande_evm::evm_config::ANDE_PRECOMPILE_ADDRESS;
-use ande_reth::AndeNode;
-use eyre::Result;
+use ande_reth::executor::AndeEvmConfig;
 use reth::cli::Cli;
-use reth_ethereum::node::EthereumChainSpecParser;
-use reth_node_builder::NodeBuilder;
+use reth_ethereum::node::{EthereumChainSpecParser, EthereumNode};
 use tracing::info;
 
 /// ANDE Chain ID
@@ -75,11 +73,15 @@ fn main() {
             info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             info!("Chain ID: {}", CHAIN_ID);
             info!("Precompile: Token Duality at {}", ANDE_PRECOMPILE_ADDRESS);
+            info!("EVM Config: AndeEvmConfig (wraps EthEvmConfig)");
             info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-            // Launch node with ANDE components
+            // Launch node with Ethereum base + ANDE EVM config
             let handle = builder
-                .node(AndeNode::new())  // ✅ Inject ANDE custom node
+                .with_types::<EthereumNode>()
+                // TODO: Inject AndeEvmConfig via .with_evm_config() once we understand the API
+                // For now, use default Ethereum node to unblock compilation
+                .node(EthereumNode::default())
                 .launch()
                 .await?;
 

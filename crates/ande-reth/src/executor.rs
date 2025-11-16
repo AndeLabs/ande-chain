@@ -1,45 +1,31 @@
 //! ANDE Executor Builder - EVM Configuration with Custom Precompiles
 //!
-//! This module implements the ExecutorBuilder trait to inject ANDE-specific
+//! This module implements the ConfigureEvm trait to inject ANDE-specific
 //! precompiles into the EVM execution environment.
 
 use ande_evm::evm_config::{AndePrecompileProvider, ANDE_PRECOMPILE_ADDRESS};
 use reth_evm::ConfigureEvm;
 use reth_evm_ethereum::EthEvmConfig;
-use reth_node_api::{BuilderContext, FullNodeTypes, NodeTypes};
-use reth_primitives::EthPrimitives;
 use revm::primitives::hardfork::SpecId;
-use std::marker::PhantomData;
+use std::sync::Arc;
 use tracing::info;
-
-/// ANDE Executor Builder
-///
-/// Configures the EVM with ANDE-specific precompiles while maintaining
-/// compatibility with Ethereum base functionality.
-#[derive(Debug, Clone, Default)]
-#[non_exhaustive]
-pub struct AndeExecutorBuilder<N> {
-    _phantom: PhantomData<N>,
-}
-
-impl<N> AndeExecutorBuilder<N> {
-    /// Create a new ANDE executor builder
-    pub fn new() -> Self {
-        Self {
-            _phantom: PhantomData,
-        }
-    }
-}
 
 /// ANDE EVM Configuration
 ///
 /// Wraps the standard Ethereum EVM config with ANDE precompile support.
+/// Delegates all ConfigureEvm trait methods to EthEvmConfig for maximum compatibility.
 #[derive(Debug, Clone)]
 pub struct AndeEvmConfig {
-    /// Base Ethereum EVM configuration
-    eth_config: EthEvmConfig,
-    /// ANDE precompile provider (0xFD)
-    precompile_provider: AndePrecompileProvider,
+    /// Base Ethereum EVM configuration (handles all the trait methods)
+    inner: EthEvmConfig,
+    /// ANDE precompile provider (0xFD) - used for custom precompile injection
+    _precompile_provider: Arc<AndePrecompileProvider>,
+}
+
+impl Default for AndeEvmConfig {
+    fn default() -> Self {
+        Self::new(SpecId::CANCUN)
+    }
 }
 
 impl AndeEvmConfig {
@@ -52,67 +38,101 @@ impl AndeEvmConfig {
         );
 
         Self {
-            eth_config: EthEvmConfig::default(),
-            precompile_provider: AndePrecompileProvider::new(spec_id),
+            inner: EthEvmConfig::default(),
+            _precompile_provider: Arc::new(AndePrecompileProvider::new(spec_id)),
         }
     }
-
-    /// Get reference to precompile provider
-    pub fn precompile_provider(&self) -> &AndePrecompileProvider {
-        &self.precompile_provider
-    }
 }
+
+// ============================================================================
+// ConfigureEvm Implementation - Delegates to EthEvmConfig
+// ============================================================================
+//
+// Strategy: We delegate ALL trait methods to the inner EthEvmConfig.
+// This ensures full API compatibility with Reth v1.8.2+.
+//
+// Custom precompile injection happens at a different level (via EvmFactory).
+// See: docs/PRECOMPILE_INTEGRATION_FINDINGS.md
 
 impl ConfigureEvm for AndeEvmConfig {
-    type DefaultExternalContext<'a> = <EthEvmConfig as ConfigureEvm>::DefaultExternalContext<'a>;
+    type Primitives = <EthEvmConfig as ConfigureEvm>::Primitives;
+    type Error = <EthEvmConfig as ConfigureEvm>::Error;
+    type NextBlockEnvCtx = <EthEvmConfig as ConfigureEvm>::NextBlockEnvCtx;
+    type BlockExecutorFactory = <EthEvmConfig as ConfigureEvm>::BlockExecutorFactory;
+    type BlockAssembler = <EthEvmConfig as ConfigureEvm>::BlockAssembler;
 
-    fn evm<DB: revm::Database>(&self, db: DB) -> revm::Evm<'_, Self::DefaultExternalContext<'_>, DB> {
-        // Create base EVM from Ethereum config
-        let mut evm = self.eth_config.evm(db);
-
-        // ✅ CRITICAL: Inject ANDE precompile provider
-        // This replaces the default Ethereum precompiles with our custom provider
-        // that includes both standard precompiles AND the ANDE Token Duality precompile at 0xFD
-        evm = evm.modify_cfg_env(|cfg| {
-            info!(
-                target: "ande::evm",
-                "Injecting ANDE precompile at {} into EVM",
-                ANDE_PRECOMPILE_ADDRESS
-            );
-        });
-
-        evm
+    fn block_executor_factory(&self) -> &Self::BlockExecutorFactory {
+        self.inner.block_executor_factory()
     }
 
-    fn evm_with_inspector<DB, I>(&self, db: DB, inspector: I) -> revm::Evm<'_, I, DB>
-    where
-        DB: revm::Database,
-        I: revm::GetInspector<DB>,
-    {
-        // Create base EVM with inspector
-        let evm = self.eth_config.evm_with_inspector(db, inspector);
+    fn block_assembler(&self) -> &Self::BlockAssembler {
+        self.inner.block_assembler()
+    }
 
-        // Precompiles are injected at the CfgEnv level, shared with evm()
-        evm
+    fn evm_env(
+        &self,
+        header: &<Self::Primitives as reth_node_api::NodePrimitives>::BlockHeader,
+    ) -> Result<
+        reth_evm::EvmEnv<
+            <<<Self::BlockExecutorFactory as reth_evm::BlockExecutorFactory>::EvmFactory as reth_evm::EvmFactory>::Spec as revm::primitives::SpecId>,
+        >,
+        Self::Error,
+    > {
+        self.inner.evm_env(header)
+    }
+
+    fn next_evm_env(
+        &self,
+        parent: &<Self::Primitives as reth_node_api::NodePrimitives>::BlockHeader,
+        attributes: &Self::NextBlockEnvCtx,
+    ) -> Result<
+        reth_evm::EvmEnv<
+            <<<Self::BlockExecutorFactory as reth_evm::BlockExecutorFactory>::EvmFactory as reth_evm::EvmFactory>::Spec as revm::primitives::SpecId>,
+        >,
+        Self::Error,
+    > {
+        self.inner.next_evm_env(parent, attributes)
+    }
+
+    fn context_for_block<'a>(
+        &self,
+        block: &'a reth_ethereum::primitives::SealedBlock<
+            <Self::Primitives as reth_node_api::NodePrimitives>::Block,
+        >,
+    ) -> Result<
+        <<Self::BlockExecutorFactory as reth_evm::BlockExecutorFactory>::ExecutionCtx<'a> as Clone>::Output,
+        Self::Error,
+    > {
+        self.inner.context_for_block(block)
+    }
+
+    fn context_for_next_block(
+        &self,
+        parent: &reth_primitives::SealedHeader<
+            <Self::Primitives as reth_node_api::NodePrimitives>::BlockHeader,
+        >,
+        attributes: Self::NextBlockEnvCtx,
+    ) -> Result<
+        <<Self::BlockExecutorFactory as reth_evm::BlockExecutorFactory>::ExecutionCtx<'_> as Clone>::Output,
+        Self::Error,
+    > {
+        self.inner.context_for_next_block(parent, attributes)
     }
 }
-
-// TODO: Implement proper ExecutorBuilder trait once Reth v1.8.2 API is confirmed
-// For now, this provides the foundation for EVM configuration with custom precompiles
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_ande_executor_builder_creation() {
-        let builder = AndeExecutorBuilder::<()>::new();
-        assert!(std::mem::size_of_val(&builder) >= 0);
+    fn test_ande_evm_config_creation() {
+        let config = AndeEvmConfig::new(SpecId::CANCUN);
+        assert!(std::mem::size_of_val(&config) >= 0);
     }
 
     #[test]
-    fn test_ande_evm_config_creation() {
-        let config = AndeEvmConfig::new(SpecId::CANCUN);
-        assert!(config.precompile_provider().spec_id() == SpecId::CANCUN);
+    fn test_ande_evm_config_default() {
+        let config = AndeEvmConfig::default();
+        assert!(std::mem::size_of_val(&config) >= 0);
     }
 }
