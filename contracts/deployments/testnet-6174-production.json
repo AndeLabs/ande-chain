@@ -1,0 +1,154 @@
+{
+  "network": "AndeChain Testnet",
+  "chainId": 6174,
+  "deploymentDate": "2025-11-15",
+  "deploymentBlock": 674,
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "deploymentMethod": "EIP-1559 with priority fee",
+  "gasSettings": {
+    "maxFeePerGas": "3 Gwei",
+    "maxPriorityFeePerGas": "2 Gwei"
+  },
+  "contracts": {
+    "ANDETokenDuality": {
+      "implementation": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "proxy": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+      "type": "UUPS Upgradeable",
+      "features": [
+        "ERC20 with voting power",
+        "Dual token support (native + ERC20)",
+        "Checkpointing for governance"
+      ]
+    },
+    "AndeNativeStaking": {
+      "implementation": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      "proxy": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+      "type": "UUPS Upgradeable",
+      "features": [
+        "Stake ANDE tokens",
+        "Lock period multipliers",
+        "Bonus voting power for stakers",
+        "Rewards minting capability"
+      ]
+    },
+    "AndeSequencerRegistry": {
+      "implementation": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+      "proxy": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+      "type": "UUPS Upgradeable",
+      "features": [
+        "Sequencer registration",
+        "Bond management",
+        "Slashing mechanism"
+      ]
+    },
+    "AndeTimelockController": {
+      "implementation": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+      "proxy": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+      "type": "UUPS Upgradeable",
+      "config": {
+        "delay": "1 hour",
+        "description": "Timelock for governance operations"
+      }
+    },
+    "AndeGovernor": {
+      "implementation": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+      "proxy": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+      "type": "UUPS Upgradeable",
+      "version": "1.0 MVP",
+      "contractSize": "19.8 KB (under 24KB limit)",
+      "config": {
+        "proposalThreshold": "1000 ANDE",
+        "votingDelay": "1 block",
+        "votingPeriod": "21600 blocks (~12 hours)",
+        "quorum": "10% fixed"
+      },
+      "features": [
+        "Dual Token Voting (base votes + staking bonus)",
+        "Anti-whale protection (max 500% bonus, 10% voting power cap)",
+        "Timelock integration",
+        "Upgradeable via UUPS"
+      ],
+      "v2Roadmap": [
+        "Adaptive Quorum (4-15%)",
+        "Multi-Level Proposals",
+        "Security Extensions (rate limiting, guardian)"
+      ]
+    }
+  },
+  "roles": {
+    "MINTER_ROLE": {
+      "hash": "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+      "grants": [
+        {
+          "contract": "ANDETokenDuality",
+          "grantee": "AndeNativeStaking",
+          "granteeAddress": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+          "purpose": "Allow staking contract to mint rewards",
+          "block": 745
+        }
+      ]
+    },
+    "PROPOSER_ROLE": {
+      "hash": "0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1",
+      "grants": [
+        {
+          "contract": "AndeTimelockController",
+          "grantee": "AndeGovernor",
+          "granteeAddress": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+          "purpose": "Allow governor to propose timelock operations",
+          "block": 749
+        }
+      ]
+    },
+    "DEFAULT_ADMIN_ROLE": {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "holders": [
+        {
+          "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          "description": "Deployer (testnet admin)"
+        },
+        {
+          "address": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+          "description": "TimelockController (production admin)"
+        }
+      ]
+    }
+  },
+  "optimizations": {
+    "AndeGovernor": {
+      "before": "30.4 KB (exceeded 24KB limit)",
+      "after": "19.8 KB (under limit)",
+      "removedFeatures": [
+        "GovernorAdaptiveQuorum (planned for v2)",
+        "GovernorMultiLevel (planned for v2)",
+        "GovernorSecurityExtensions (planned for v2)"
+      ],
+      "compilerSettings": {
+        "optimizer": true,
+        "optimizerRuns": 200,
+        "viaIR": true
+      }
+    }
+  },
+  "deploymentStrategy": {
+    "issue": "Persistent mempool with stuck transactions",
+    "solution": "EIP-1559 with explicit gas parameters",
+    "command": "forge script --with-gas-price 3000000000 --priority-gas-price 2000000000",
+    "result": "ONCHAIN EXECUTION COMPLETE & SUCCESSFUL"
+  },
+  "nextSteps": [
+    "Verify contracts on block explorer",
+    "Update frontend with new contract addresses",
+    "Test governance flow (create proposal, vote, execute)",
+    "Mint initial ANDE supply",
+    "Delegate voting power for testing",
+    "Deploy to production mainnet"
+  ],
+  "notes": [
+    "All contracts deployed successfully with UUPS upgrade pattern",
+    "Governor contract size optimized for EIP-170 compliance",
+    "Roles configured correctly for production governance",
+    "EIP-1559 gas management implemented for reliable deployments",
+    "V2 features planned for future upgrades"
+  ]
+}

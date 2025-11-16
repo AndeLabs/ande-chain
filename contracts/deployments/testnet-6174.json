@@ -1,0 +1,51 @@
+{
+  "network": "AndeChain Testnet",
+  "chainId": 6174,
+  "timestamp": 1763257355,
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "blockNumber": 204,
+  "contracts": {
+    "ANDE": {
+      "implementation": "0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519",
+      "proxy": "0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496"
+    },
+    "AndeNativeStaking": {
+      "implementation": "0x34A1D3fff3958843C43aD80F30b94c510645C316",
+      "proxy": "0x90193C961A926261B756D1E5bb255e67ff9498A1"
+    },
+    "AndeSequencerRegistry": {
+      "implementation": "0xA8452Ec99ce0C64f20701dB7dD3abDb607c00496",
+      "proxy": "0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3"
+    },
+    "AndeTimelockController": {
+      "implementation": "0xDB8cFf278adCCF9E9b5da745B44E754fC4EE3C76",
+      "proxy": "0x50EEf481cae4250d252Ae577A09bF514f224C6C4"
+    },
+    "AndeGovernor": {
+      "implementation": "0x62c20Aa1e0272312BC100b4e23B4DC1Ed96dD7D1",
+      "proxy": "0xDEb1E9a6Be7Baf84208BB6E10aC9F9bbE1D70809"
+    }
+  },
+  "roles": {
+    "MINTER_ROLE": {
+      "hash": "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+      "grants": [
+        {
+          "contract": "ANDE",
+          "grantee": "AndeNativeStaking",
+          "purpose": "Allow staking contract to mint rewards"
+        }
+      ]
+    },
+    "PROPOSER_ROLE": {
+      "hash": "0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1",
+      "grants": [
+        {
+          "contract": "AndeTimelockController",
+          "grantee": "AndeGovernor",
+          "purpose": "Allow governor to propose timelock operations"
+        }
+      ]
+    }
+  }
+}

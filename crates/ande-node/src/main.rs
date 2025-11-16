@@ -1,5 +1,28 @@
 //! ANDE Chain Node - Sovereign Rollup with Evolve Sequencer & Celestia DA
 //!
+//! ⚠️ IMPORTANT - Estado actual del nodo (2025-11-15)
+//!
+//! Este binario es un SKELETON/TEMPLATE para demostración de componentes.
+//! NO es un nodo Reth completo funcional.
+//!
+//! PROBLEMA:
+//! - NO ejecuta el EVM de Reth
+//! - NO procesa transacciones reales
+//! - Solo simula producción de bloques
+//!
+//! SOLUCIÓN ACTUAL (Testnet):
+//! - Usar NativeTransferPrecompileMock desplegado en 0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE
+//! - Ver: contracts/deployments/testnet-6174-production.json
+//!
+//! SOLUCIÓN FUTURA (Mainnet):
+//! - Crear `ande-reth` crate (similar a op-reth)
+//! - Integrar AndePrecompileProvider en el EVM de Reth
+//! - Ver: docs/PRECOMPILE_INTEGRATION_FINDINGS.md
+//!
+//! Referencias:
+//! - AndePrecompileProvider: crates/ande-evm/src/evm_config/ande_precompile_provider.rs
+//! - op-reth example: https://github.com/paradigmxyz/reth/tree/main/bin/reth
+//!
 //! Production-ready node implementation featuring:
 //! - Decentralized Multi-Sequencer Consensus with CometBFT
 //! - Token Duality Precompile at 0x00...FD

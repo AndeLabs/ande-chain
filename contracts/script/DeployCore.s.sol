@@ -67,11 +67,13 @@ contract DeployCore is Script {
     address public andeProxy;
     address public stakingImplementation;
     address public stakingProxy;
+    address public sequencerImplementation;
+    address public sequencerProxy;
     address public timelockImplementation;
     address payable public timelockProxy;
     address public governorImplementation;
     address public governorProxy;
-    
+
     // Deployer address
     address public deployer;
     
@@ -99,31 +101,37 @@ contract DeployCore is Script {
         
         // Validate deployer has sufficient balance
         require(deployer.balance >= 10 ether, "Insufficient balance for deployment");
-        
-        vm.startBroadcast();
+
+        // Start broadcasting with the private key
+        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         
         // Step 1: Deploy ANDE Token
         _deployAndeToken();
         
         // Step 2: Deploy Staking Contract
         _deployStaking();
-        
-        // Step 3: Deploy Timelock Controller
+
+        // Step 3: Deploy Sequencer Registry
+        _deploySequencer();
+
+        // Step 4: Deploy Timelock Controller
         _deployTimelock();
-        
-        // Step 4: Deploy Governor
+
+        // Step 5: Deploy Governor
         _deployGovernor();
-        
-        // Step 5: Configure roles and permissions
-        _configureRoles();
-        
+
+        // Step 6: Configure roles and permissions
+        // NOTE: Roles must be configured manually after deployment
+        // _configureRoles();
+
         vm.stopBroadcast();
-        
+
         // Step 6: Output deployment summary
         _outputDeploymentSummary();
-        
+
         // Step 7: Generate deployment JSON
-        _generateDeploymentJson();
+        // NOTE: Disabled due to file system permission issues
+        // _generateDeploymentJson();
     }
     
     // ============================================================================
@@ -159,11 +167,11 @@ contract DeployCore is Script {
     
     function _deployStaking() internal {
         console2.log("=== Step 2: Deploying Staking Contract ===");
-        
+
         // Deploy implementation
         stakingImplementation = address(new AndeNativeStaking());
         console2.log("Staking Implementation:", stakingImplementation);
-        
+
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSignature(
             "initialize(address,address,address)",
@@ -171,12 +179,34 @@ contract DeployCore is Script {
             deployer,   // defaultAdmin
             deployer    // treasury
         );
-        
+
         // Deploy proxy
         stakingProxy = address(new ERC1967Proxy(stakingImplementation, initData));
         console2.log("Staking Proxy:", stakingProxy);
-        
+
         console2.log("[SUCCESS] Staking Contract deployed successfully");
+        console2.log("");
+    }
+
+    function _deploySequencer() internal {
+        console2.log("=== Step 3: Deploying Sequencer Registry ===");
+
+        // Deploy implementation
+        sequencerImplementation = address(new AndeSequencerRegistry());
+        console2.log("Sequencer Implementation:", sequencerImplementation);
+
+        // Prepare initialization data
+        bytes memory initData = abi.encodeWithSignature(
+            "initialize(address,address)",
+            andeProxy,  // ANDE token for sequencer bonds
+            deployer    // defaultAdmin
+        );
+
+        // Deploy proxy
+        sequencerProxy = address(new ERC1967Proxy(sequencerImplementation, initData));
+        console2.log("Sequencer Proxy:", sequencerProxy);
+
+        console2.log("[SUCCESS] Sequencer Registry deployed successfully");
         console2.log("");
     }
     
@@ -210,34 +240,34 @@ contract DeployCore is Script {
     }
     
     function _deployGovernor() internal {
-        console2.log("=== Step 4: Deploying Governor ===");
-        
+        console2.log("=== Step 5: Deploying Governor ===");
+
         // Deploy implementation
         governorImplementation = address(new AndeGovernor());
         console2.log("Governor Implementation:", governorImplementation);
-        
-        // Prepare initialization data
+
+        // Prepare initialization data - using correct types: uint32, uint48
         bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256,uint256,uint256,address)",
-            andeProxy,          // token
-            stakingProxy,       // stakingContract
-            timelockProxy,      // timelock
-            VOTING_PERIOD,      // votingPeriod
-            VOTING_DELAY,       // votingDelay
-            PROPOSAL_THRESHOLD, // proposalThreshold
-            deployer           // emergencyCouncil
+            "initialize(address,address,address,uint32,uint48,uint256,address)",
+            andeProxy,                // token
+            stakingProxy,             // stakingContract
+            timelockProxy,            // timelock
+            uint32(VOTING_PERIOD),    // votingPeriod (uint32)
+            uint48(VOTING_DELAY),     // votingDelay (uint48)
+            PROPOSAL_THRESHOLD,       // proposalThreshold (uint256)
+            deployer                  // emergencyCouncil
         );
-        
+
         // Deploy proxy
         governorProxy = address(new ERC1967Proxy(governorImplementation, initData));
         console2.log("Governor Proxy:", governorProxy);
-        
+
         console2.log("[SUCCESS] Governor deployed successfully");
         console2.log("");
     }
     
     function _configureRoles() internal {
-        console2.log("=== Step 5: Configuring Roles and Permissions ===");
+        console2.log("=== Step 6: Configuring Roles and Permissions ===");
         
         // Grant PROPOSER_ROLE to Governor in Timelock
         bytes32 PROPOSER_ROLE = AndeTimelockController(timelockProxy).PROPOSER_ROLE();
@@ -276,6 +306,8 @@ contract DeployCore is Script {
         console2.log("  ANDE Proxy:", andeProxy);
         console2.log("  Staking Implementation:", stakingImplementation);
         console2.log("  Staking Proxy:", stakingProxy);
+        console2.log("  Sequencer Implementation:", sequencerImplementation);
+        console2.log("  Sequencer Proxy:", sequencerProxy);
         console2.log("  Timelock Implementation:", timelockImplementation);
         console2.log("  Timelock Proxy:", timelockProxy);
         console2.log("  Governor Implementation:", governorImplementation);
@@ -311,6 +343,10 @@ contract DeployCore is Script {
             '    "AndeNativeStaking": {\n',
             '      "implementation": "', vm.toString(stakingImplementation), '",\n',
             '      "proxy": "', vm.toString(stakingProxy), '"\n',
+            '    },\n',
+            '    "AndeSequencerRegistry": {\n',
+            '      "implementation": "', vm.toString(sequencerImplementation), '",\n',
+            '      "proxy": "', vm.toString(sequencerProxy), '"\n',
             '    },\n',
             '    "AndeTimelockController": {\n',
             '      "implementation": "', vm.toString(timelockImplementation), '",\n',

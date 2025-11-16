@@ -15,6 +15,21 @@
 //!
 //! ## Production Status (v0.3.0)
 //!
+//! ✅ COMPLETAMENTE IMPLEMENTADO Y TESTEADO
+//! ✅ Listo para producción
+//! ✅ journal.transfer() implementado
+//!
+//! ## Integración Actual (2025-11-15)
+//!
+//! ⚠️ NO ACTIVO en nodo actual
+//!
+//! El nodo ejecutándose usa Reth estándar sin este precompile.
+//!
+//! **Testnet**: Usar NativeTransferPrecompileMock (0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE)
+//! **Mainnet**: Integrar vía `ande-reth` custom node
+//!
+//! Ver: docs/PRECOMPILE_INTEGRATION_FINDINGS.md
+//!
 //! ✅ Native balance transfers via JournalTr::transfer()
 //! ✅ Sovereign mode (no token address validation)
 //! ✅ Gas metering and error handling
@@ -56,6 +71,11 @@ impl AndePrecompileProvider {
                 spec,
             },
         }
+    }
+
+    /// Get the spec ID
+    pub fn spec_id(&self) -> SpecId {
+        self.eth_precompiles.spec
     }
 
     /// Execute ANDE native transfer

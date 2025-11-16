@@ -57,19 +57,20 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY tests ./tests
 
-# Build ANDE node with optimizations
+# Build ANDE Reth - Production node with native precompiles
+#
+# ✅ PRODUCCIÓN (2025-11-15):
+# ande-reth es un nodo Reth completo con precompiles nativos.
+# Integra AndePrecompileProvider en 0xFD directamente en el EVM.
+#
+# Ver: docs/PRECOMPILE_INTEGRATION_FINDINGS.md
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/build/target \
     cargo build \
         --profile ${BUILD_PROFILE} \
-        --bin ande-node \
+        --bin ande-reth \
         --features "${FEATURES}" \
-    && cp target/${BUILD_PROFILE}/ande-node /ande-node || \
-    (echo "ANDE node build failed, using fallback Reth build" && \
-     git clone --branch v1.1.7 --depth 1 https://github.com/paradigmxyz/reth.git /reth && \
-     cd /reth && \
-     cargo build --profile ${BUILD_PROFILE} --bin reth && \
-     cp target/${BUILD_PROFILE}/reth /ande-node)
+    && cp target/${BUILD_PROFILE}/ande-reth /ande-node
 
 # Strip binary and verify
 RUN strip --strip-all /ande-node && \

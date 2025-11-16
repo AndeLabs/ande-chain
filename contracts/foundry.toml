@@ -25,9 +25,10 @@ evm_version = "cancun"
 
 # Habilita el optimizador de Solidity, crucial para reducir costos de gas en producción.
 optimizer = true
-# Número de "runs" para el optimizador. Un número alto optimiza para tamaño de contrato (costo de despliegue),
-# un número bajo optimiza para costo de ejecución de funciones.
-optimizer_runs = 20000
+# Número de "runs" para el optimizador. Un número BAJO optimiza para tamaño de contrato (deployment size),
+# un número alto optimiza para costo de ejecución de funciones.
+# Using 200 for smaller contract size to fit within 24KB limit
+optimizer_runs = 200
 
 # Habilita la compilación a través de IR (Intermediate Representation) para evitar errores de "Stack too deep".
 via_ir = true

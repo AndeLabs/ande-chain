@@ -9,6 +9,7 @@ members = [
     "crates/ande-rpc",
     "crates/ande-network",
     "crates/ande-node",
+    "crates/ande-reth",        # Production Reth node with native precompiles
     "crates/ande-cli",
     "crates/celestia-uploader",
     "bindings",
