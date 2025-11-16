@@ -11,9 +11,9 @@ ARG DEBIAN_VERSION=bookworm
 # =============================================================================
 # BUILDER STAGE: Maximum Performance Optimized Build
 # =============================================================================
-# Note: Using nightly for edition2024 support required by Reth v1.8.2
-# Nightly images use simplified tag format without debian version
-FROM rust:nightly AS builder
+# Note: Using stable base + rustup to install nightly for edition2024 support
+# This is more reliable than depending on rust:nightly Docker tags
+FROM rust:1.83-slim-${DEBIAN_VERSION} AS builder
 
 # Build arguments
 ARG BUILD_PROFILE=maxperf
@@ -39,6 +39,13 @@ RUN apt-get update && \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
+
+# Install Rust nightly toolchain for edition2024 support required by Reth v1.8.2
+RUN rustup toolchain install nightly && \
+    rustup default nightly && \
+    rustup component add rust-src && \
+    cargo --version && \
+    rustc --version
 
 # Configure Rust for MAXIMUM performance (Reth best practices)
 # - target-cpu=native: Optimize for build machine CPU (use x86-64-v3 for portability)
