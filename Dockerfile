@@ -12,7 +12,7 @@ ARG DEBIAN_VERSION=bookworm
 # BUILDER STAGE: Maximum Performance Optimized Build
 # =============================================================================
 # Note: Using nightly for edition2024 support required by Reth v1.8.2
-FROM rustlang/rust:nightly-slim-${DEBIAN_VERSION} AS builder
+FROM rust:nightly-slim-${DEBIAN_VERSION} AS builder
 
 # Build arguments
 ARG BUILD_PROFILE=maxperf
