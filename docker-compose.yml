@@ -106,7 +106,7 @@ services:
     command: 
       - "/bin/sh"
       - "-c"
-      - "chown -R 65532:65532 /data && echo '✅ Data permissions fixed'"
+      - "mkdir -p /data/db && chown -R 65532:65532 /data && echo '✅ Data permissions fixed'"
     networks:
       - andechain
 
@@ -304,10 +304,6 @@ services:
           --evnode.da.address=$$DA_ADDRESS \
           --evnode.da.namespace=$$DA_NAMESPACE \
           --evnode.da.auth_token=$$DA_AUTH_TOKEN \
-          --evnode.da.gas_price=$$DA_GAS_PRICE \
-          --evnode.da.gas_multiplier=$$DA_GAS_MULTIPLIER \
-          --evnode.da.max_submit_attempts=$$DA_MAX_SUBMIT_ATTEMPTS \
-          --evnode.da.block_time=$$DA_BLOCK_TIME \
           --evnode.signer.passphrase_file=/tmp/pass-start.txt \
           --evnode.p2p.listen_address=/ip4/0.0.0.0/tcp/7676 \
           --evnode.rpc.address=0.0.0.0:7331 \
