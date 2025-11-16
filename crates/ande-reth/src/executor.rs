@@ -1,35 +1,34 @@
-//! ANDE Executor Builder
+//! ANDE Executor - Feature Configuration
 //!
-//! Custom executor builder that injects ANDE precompiles and custom features
-//! into the EVM execution layer.
-//!
-//! ## Features
-//!
+//! This module provides configuration for ANDE Chain custom features:
 //! - Token Duality Precompile (0xFD)
 //! - Parallel EVM Execution (Block-STM)
 //! - MEV Detection System
-//! - Production-ready with comprehensive logging
+//!
+//! Note: In production v1.0.0, we use EthereumNode directly.
+//! Custom EVM configuration will be added in future versions via hooks.
 
 use ande_evm::evm_config::AndePrecompileProvider;
-use reth_chainspec::ChainSpec;
-use reth_evm::ConfigureEvm;
-use reth_evm_ethereum::EthEvmConfig;
 use revm::primitives::hardfork::SpecId;
-use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::info;
 
-/// Custom EVM configuration for ANDE Chain
+/// ANDE Chain feature configuration
 #[derive(Debug, Clone)]
-pub struct AndeEvmConfig {
-    inner: EthEvmConfig,
+pub struct AndeConfig {
     spec_id: SpecId,
     parallel_enabled: bool,
     mev_detection_enabled: bool,
 }
 
-impl AndeEvmConfig {
-    /// Create new ANDE EVM config
-    pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
+impl Default for AndeConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AndeConfig {
+    /// Create new ANDE configuration from environment
+    pub fn new() -> Self {
         // Get spec ID from environment or default to CANCUN
         let spec_id = std::env::var("ANDE_SPEC_ID")
             .ok()
@@ -55,11 +54,10 @@ impl AndeEvmConfig {
             spec = ?spec_id,
             parallel = parallel_enabled,
             mev_detection = mev_detection_enabled,
-            "Initializing ANDE EVM Config"
+            "Initializing ANDE Chain configuration"
         );
 
         Self {
-            inner: EthEvmConfig::new(chain_spec),
             spec_id,
             parallel_enabled,
             mev_detection_enabled,
@@ -88,28 +86,6 @@ impl AndeEvmConfig {
             "Creating ANDE precompile provider with Token Duality at 0xFD"
         );
         AndePrecompileProvider::new(self.spec_id)
-    }
-}
-
-impl ConfigureEvm for AndeEvmConfig {
-    type DefaultExternalContext<'a> = <EthEvmConfig as ConfigureEvm>::DefaultExternalContext<'a>;
-
-    fn evm<DB: revm::Database>(&self, db: DB) -> revm::Evm<'_, Self::DefaultExternalContext<'_>, DB> {
-        // Use inner EthEvmConfig for standard EVM setup
-        self.inner.evm(db)
-    }
-
-    fn evm_with_inspector<DB, I>(&self, db: DB, inspector: I) -> revm::Evm<'_, I, DB>
-    where
-        DB: revm::Database,
-        I: revm::GetInspector<DB>,
-    {
-        // Use inner EthEvmConfig with inspector
-        self.inner.evm_with_inspector(db, inspector)
-    }
-
-    fn default_external_context<'a>(&self) -> Self::DefaultExternalContext<'a> {
-        self.inner.default_external_context()
     }
 }
 
