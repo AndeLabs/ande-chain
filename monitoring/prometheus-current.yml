@@ -1,0 +1,30 @@
+# Prometheus Configuration for Current ANDE Chain Stack
+# Monitoring actual running containers
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'ande-testnet'
+    environment: 'testnet'
+
+# Scrape configurations
+scrape_configs:
+  # Main ANDE Node
+  - job_name: 'ande-node'
+    static_configs:
+      - targets: ['ande-node:9001']
+        labels:
+          instance: 'ande-node'
+          role: 'primary'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Celestia Light Node (if metrics available)
+  - job_name: 'celestia'
+    static_configs:
+      - targets: ['celestia:26658']
+    metrics_path: '/metrics'
