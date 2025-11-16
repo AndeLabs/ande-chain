@@ -53,6 +53,8 @@ ENV CARGO_PROFILE_MAXPERF_BUILD_OVERRIDE_DEBUG=false
 # Copy workspace files
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
+COPY bindings ./bindings
+COPY tools ./tools
 COPY tests ./tests
 
 # Build ANDE Reth - Production node with native precompiles
