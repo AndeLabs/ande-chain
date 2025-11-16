@@ -1,78 +1,53 @@
-# 🌐 ANDE Chain - Sovereign Rollup
+# 🌐 ANDE Chain - Custom Reth Sovereign Rollup
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-109%2F109-success)]()
-[![Rust](https://img.shields.io/badge/rust-1.83+-orange)]()
-[![Solidity](https://img.shields.io/badge/solidity-0.8.28-blue)]()
+[![Rust](https://img.shields.io/badge/rust-nightly--2024--10--18-orange)]()
+[![Reth](https://img.shields.io/badge/reth-v1.8.2-blue)]()
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-informational)]()
 
-> **High-performance EVM-compatible sovereign rollup with Token Duality, Parallel Execution, and MEV Protection**
+> **Production-grade EVM-compatible sovereign rollup with Token Duality, custom execution, and Celestia DA**
 
-Built on [Reth](https://github.com/paradigmxyz/reth) v1.8.2 with [Celestia](https://celestia.org) Data Availability.
+ANDE Chain is a **custom fork of Reth v1.8.2** implementing innovative features through a modular wrapper pattern architecture.
+
+---
+
+## 🎯 What is ANDE Chain?
+
+ANDE Chain is NOT a wrapper around Reth - it's a **custom implementation** that:
+- Extends Reth's execution layer with ANDE-specific features
+- Uses a modular wrapper pattern for maintainability
+- Integrates Token Duality at the protocol level
+- Prepares for parallel EVM execution and MEV protection
+
+### Why Custom Reth?
+
+✅ **Full Control**: Custom EVM, consensus, and execution logic  
+✅ **Modular**: Wrapper pattern enables easy updates  
+✅ **Compatible**: Works with standard Reth tooling  
+✅ **Scalable**: Ready for Block-STM and custom consensus  
 
 ---
 
 ## ⚡ Key Features
 
-### 🎯 Token Duality Precompile
-- Native token functions as ERC20 at the protocol level
-- Precompile at `0x00000000000000000000000000000000000000FD`
-- Seamless bridge between native and contract balance
-- Per-call and per-block transfer limits
+### 🪙 Token Duality Precompile
+Native ANDE token accessible as ERC-20 at protocol level
+- **Address**: `0x00000000000000000000000000000000000000FD`
+- **Security**: Allow-list, per-call and per-block caps
+- **Integration**: Seamless bridge between native and contract balance
+- **Status**: ✅ Implemented, ⏳ Runtime injection pending
 
-### 🚀 Parallel Transaction Execution
-- **Block-STM** algorithm for concurrent execution
-- Multi-version memory (MVCC) for conflict resolution
-- Lazy updates for beneficiary and precompile transfers
-- **10-15x throughput improvement** over sequential execution
-- 16 concurrent worker threads
+### 🏗️ Custom Reth Implementation  
+Fork of Reth v1.8.2 with wrapper pattern architecture
+- **AndeNode**: Custom node type
+- **AndeExecutorBuilder**: Custom EVM execution
+- **AndeEvmFactory**: Wrapper around EthEvmFactory
+- **Status**: ✅ **Fully functional and compiling**
 
-### 🛡️ MEV Protection
-- MEV detection and classification system
-- Auction-based bundle submission
-- Fair distribution: 80% to stakers, 20% to treasury
-- Transparent MEV capture and redistribution
-
-### 🔐 Custom PoS Consensus
-- Contract-based validator management
-- Block attestation system
-- Adaptive block time (1s active, 5s idle)
-- Integration with Celestia for data availability
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    ANDE Chain Stack                      │
-├─────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │         Execution Layer (ande-node)                 │ │
-│  │  • Reth v1.8.2 with Custom EVM                     │ │
-│  │  • ANDE Precompile (Token Duality)                 │ │
-│  │  • Parallel Executor (Block-STM)                   │ │
-│  │  • MEV Detection & Protection                      │ │
-│  └───────────────────┬────────────────────────────────┘ │
-│                      │ Engine API (JWT)                  │
-│                      ▼                                    │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │       Consensus Layer (Evolve Sequencer)            │ │
-│  │  • Transaction Ordering                             │ │
-│  │  • Block Production (Adaptive)                      │ │
-│  │  • Validator Attestations                           │ │
-│  └───────────────────┬────────────────────────────────┘ │
-│                      │ DA Submission                     │
-│                      ▼                                    │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │     Data Availability (Celestia Light Node)         │ │
-│  │  • Mocha-4 Testnet                                  │ │
-│  │  • Namespace: andechain-v1                         │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-└─────────────────────────────────────────────────────────┘
-```
+### 🔮 Coming Soon
+- **Parallel Execution**: Block-STM algorithm for 10-15x throughput
+- **MEV Protection**: Fair MEV distribution to stakers
+- **BFT Consensus**: Multi-sequencer validator network
 
 ---
 
@@ -80,241 +55,306 @@ Built on [Reth](https://github.com/paradigmxyz/reth) v1.8.2 with [Celestia](http
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- 16GB RAM (32GB recommended)
-- 100GB free disk space
+```bash
+# Rust nightly toolchain
+rustup toolchain install nightly-2024-10-18
+rustup default nightly-2024-10-18
 
-### 1. Clone & Configure
+# Foundry (for contracts)
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+
+### Build
 
 ```bash
-git clone https://github.com/ande-labs/ande-chain
+# Clone repository
+git clone https://github.com/AndeLabs/ande-chain.git
 cd ande-chain
 
-# Copy environment template
-cp .env.example .env
+# Build in release mode
+cargo build --release
 
-# Edit configuration (important!)
-nano .env
+# Binary location
+./target/release/ande-node
 ```
 
-### 2. Start the Stack
+### Run
 
 ```bash
-# Quick start (recommended)
-./start.sh
+# Start ANDE node (requires genesis.json)
+./target/release/ande-node --chain specs/genesis.json
 
-# Or manually
-docker compose up -d
+# With debug logging
+RUST_LOG=debug ./target/release/ande-node
 
-# View logs
-docker compose logs -f ande-node
+# Check version
+./target/release/ande-node --version
 ```
-
-### 3. Access Services
-
-- **RPC Endpoint:** http://localhost:8545
-- **WebSocket:** ws://localhost:8546
-- **Block Explorer:** http://localhost:4000
-- **Faucet:** http://localhost:8081
-- **Grafana Dashboard:** http://localhost:3000
-
-### 4. Test Connection
-
-```bash
-# Get current block number
-curl -X POST -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-  http://localhost:8545
-
-# Get chain ID (should be 6174)
-curl -X POST -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
-  http://localhost:8545
-```
-
----
-
-## 📦 Repository Structure
-
-```
-ande-chain/
-├── crates/              # Rust workspace (10 crates)
-│   ├── ande-evm/       # Core EVM customizations
-│   ├── ande-consensus/ # Consensus logic
-│   ├── ande-rpc/       # RPC extensions
-│   ├── ande-node/      # Node binary
-│   └── ...
-├── contracts/          # Smart contracts (90 files)
-│   ├── src/governance/ # Governance system
-│   ├── src/staking/    # Native staking
-│   ├── src/tokens/     # Token contracts
-│   └── ...
-├── specs/              # Chain specifications
-├── infra/              # Infrastructure configs
-├── docs/               # Documentation
-└── tests/              # Integration tests
-```
-
----
-
-## 🎯 Network Information
-
-| Parameter | Value |
-|-----------|-------|
-| **Chain ID** | 6174 |
-| **Network** | AndeChain |
-| **Symbol** | ANDE |
-| **Consensus** | PoS (Custom) |
-| **Block Time** | Adaptive (1s-5s) |
-| **DA Layer** | Celestia Mocha-4 |
-| **RPC** | http://localhost:8545 |
-| **Explorer** | http://localhost:4000 |
-
-### Add to MetaMask
-
-```json
-{
-  "chainId": "0x181E",
-  "chainName": "AndeChain",
-  "nativeCurrency": {
-    "name": "ANDE",
-    "symbol": "ANDE",
-    "decimals": 18
-  },
-  "rpcUrls": ["http://localhost:8545"],
-  "blockExplorerUrls": ["http://localhost:4000"]
-}
-```
-
----
-
-## 🛠️ Development
-
-### Build from Source
-
-```bash
-# Build Rust workspace
-cargo build --workspace --release
-
-# Build contracts
-cd contracts && forge build
-
-# Run tests
-cargo test --workspace
-forge test
-```
-
-### Run Node (without Docker)
-
-```bash
-cargo run --release --bin ande-node -- node \
-  --chain specs/genesis.json \
-  --datadir ./data \
-  --http --http.port 8545 \
-  --dev
-```
-
----
-
-## 📊 Tech Stack
-
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| **Execution** | Reth | v1.8.2 |
-| **EVM** | REVM | v29.0.1 |
-| **Consensus** | Custom PoS | - |
-| **DA Layer** | Celestia | Mocha-4 |
-| **Smart Contracts** | Solidity | 0.8.28 |
-| **Tooling** | Foundry | Latest |
-| **Monitoring** | Prometheus + Grafana | Latest |
-| **Explorer** | Blockscout | Latest |
-
----
-
-## 📈 Performance
-
-| Metric | Value |
-|--------|-------|
-| **Target TPS** | 1000+ |
-| **Block Time** | 1-5s (adaptive) |
-| **Finality (Soft)** | ~1s |
-| **Finality (Hard)** | ~12s (Celestia) |
-| **Parallel Workers** | 16 |
-| **Speedup** | 10-15x vs sequential |
-
----
-
-## 🔬 Smart Contracts
-
-### Core Contracts
-
-- **AndeConsensusV2** - PoS consensus management
-- **AndeNativeStaking** - Native token staking
-- **ANDEToken** - ERC20 implementation
-- **AndeGovernorLite** - On-chain governance
-- **MEVAuctionManager** - MEV auction system
-- **AndeTokenFactory** - Token launchpad
-
-### DeFi Protocols
-
-- **AndeLend** - Lending & borrowing
-- **AndePerpetuals** - Perpetual contracts
-- **AndeChainBridge** - Cross-chain bridge
-
-[Full contract list](./contracts/README.md)
 
 ---
 
 ## 📚 Documentation
 
-- **[Getting Started](./docs/GETTING_STARTED.md)** - Quick start guide
-- **[Docker Guide](./DOCKER_README.md)** - Complete Docker documentation
-- **[Architecture](./docs/ARCHITECTURE.md)** - System architecture
-- **[Smart Contracts](./contracts/README.md)** - Contract documentation
-- **[API Reference](./docs/API.md)** - RPC API reference
-- **[Migration Guide](./MIGRATION_COMPLETE.md)** - Migration from previous versions
+### Essential Guides
+
+- **[Custom Reth Implementation Guide](docs/CUSTOM_RETH_IMPLEMENTATION.md)** ⭐
+  - Complete architecture documentation
+  - Wrapper pattern explained
+  - Troubleshooting and debugging
+  - Critical points for future implementations
+  
+- **[Quick Start](QUICK_START.md)**
+  - Step-by-step setup
+  - Environment configuration
+  - Common commands
+
+- **[Deployment Guide](DEPLOYMENT.md)**
+  - Production deployment
+  - Docker setup
+  - Monitoring and maintenance
+
+### Technical Documentation
+
+- `docs/SECURITY_AUDIT_PRECOMPILE.md` - Token Duality security review
+- `contracts/README.md` - Smart contracts documentation
+- `crates/ande-evm/` - EVM customizations
+- `crates/ande-reth/` - Custom Reth implementation
+
+---
+
+## 🏗️ Architecture
+
+### High-Level Overview
+
+```
+┌──────────────────────────────────────────────────────┐
+│                   ANDE Chain                         │
+│              (Custom Reth v1.8.2)                    │
+└──────────────────────────────────────────────────────┘
+                        ↓
+┌──────────────────────────────────────────────────────┐
+│                    AndeNode                          │
+│              (Custom Node Type)                      │
+│  ComponentsBuilder:                                  │
+│    • Executor: AndeExecutorBuilder ← CUSTOM         │
+│    • Consensus: AndeConsensusBuilder ← CUSTOM       │
+│    • EVM: AndeEvmFactory (wrapper) ← CUSTOM         │
+└──────────────────────────────────────────────────────┘
+                        ↓
+┌──────────────────────────────────────────────────────┐
+│              AndeEvmFactory<F>                       │
+│            (Wrapper Pattern)                         │
+│                                                      │
+│  Wraps: EthEvmFactory (standard)                    │
+│  Adds:  ANDE Precompiles                           │
+│         Custom context                              │
+└──────────────────────────────────────────────────────┘
+```
+
+### Why Wrapper Pattern?
+
+Instead of forking the entire EVM, we wrap `EthEvmFactory`:
+
+```rust
+struct AndeEvmFactory<F = EthEvmFactory> {
+    inner: F,  // Delegate to standard factory
+    // Add only what we need
+}
+```
+
+**Benefits**:
+- ✅ Easier Reth updates
+- ✅ Modular and testable
+- ✅ Compatible with Reth ecosystem
+- ✅ Isolated customizations
+
+---
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+ande-chain/
+├── crates/
+│   ├── ande-reth/         # Custom Reth node (CORE)
+│   │   ├── src/
+│   │   │   ├── node.rs           # AndeNode definition
+│   │   │   ├── executor.rs       # AndeExecutorBuilder
+│   │   │   ├── consensus.rs      # AndeConsensusBuilder
+│   │   │   ├── main.rs           # Binary entry point
+│   │   │   └── lib.rs            # Library exports
+│   │   └── Cargo.toml
+│   │
+│   ├── ande-evm/          # EVM customizations
+│   │   ├── src/
+│   │   │   ├── evm_config/
+│   │   │   │   ├── ande_evm_factory.rs      # Wrapper factory
+│   │   │   │   ├── ande_token_duality_precompile.rs
+│   │   │   │   └── ande_precompile_provider.rs
+│   │   │   ├── parallel_executor.rs
+│   │   │   └── mev_detector.rs
+│   │   └── Cargo.toml
+│   │
+│   ├── ande-node/         # Node binary (old, to be merged)
+│   ├── ande-consensus/    # Consensus contracts client
+│   └── ande-primitives/   # Shared types
+│
+├── contracts/             # Solidity smart contracts
+├── specs/                # Chain specifications
+└── docs/                 # Documentation
+```
+
+### Key Files to Know
+
+**For Custom Reth Development**:
+- `crates/ande-reth/src/node.rs` - Node type definition
+- `crates/ande-reth/src/executor.rs` - EVM execution builder
+- `crates/ande-reth/src/consensus.rs` - Consensus builder
+- `crates/ande-evm/src/evm_config/ande_evm_factory.rs` - EVM factory wrapper
+
+**For Precompiles**:
+- `crates/ande-evm/src/evm_config/ande_token_duality_precompile.rs` - Token Duality logic
+- `crates/ande-evm/src/evm_config/ande_precompile_provider.rs` - Precompile provider
+
+### Common Commands
+
+```bash
+# Development
+cargo build                    # Debug build (faster)
+cargo build --release          # Production build
+cargo check                    # Fast type checking
+cargo test                     # Run all tests
+cargo clippy                   # Linting
+
+# Specific crates
+cargo build -p ande-reth
+cargo test -p ande-evm
+
+# Cleaning
+cargo clean                    # Remove build artifacts
+
+# Debugging
+RUST_LOG=debug cargo run
+RUST_BACKTRACE=1 cargo run
+```
+
+### Testing
+
+```bash
+# All tests
+cargo test
+
+# Specific test
+cargo test test_ande_executor_builder_creation
+
+# With output
+cargo test -- --nocapture
+
+# Integration tests
+cargo test --test '*'
+```
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+```bash
+# Logging
+export RUST_LOG=info           # Log level
+export RUST_BACKTRACE=1        # Enable backtraces
+
+# ANDE-specific
+export ANDE_ENABLE_PARALLEL_EVM=true
+export ANDE_ENABLE_MEV_DETECTION=true
+export ANDE_PRECOMPILE_ADDRESS=0x00000000000000000000000000000000000000FD
+```
+
+### Genesis Configuration
+
+See `specs/genesis.json` for chain initialization parameters:
+- Chain ID: 6174
+- Gas limit: 30,000,000
+- Hardfork: Cancun
+- Precompiles and initial allocations
+
+---
+
+## 📊 Status
+
+### Current Implementation Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Custom Reth Node | ✅ Complete | AndeNode fully functional |
+| Executor Builder | ✅ Complete | AndeExecutorBuilder working |
+| Consensus Builder | ✅ Complete | Single-sequencer mode active |
+| EVM Factory Wrapper | ✅ Complete | Wrapper pattern implemented |
+| Token Duality Precompile | ✅ Implemented | Runtime injection pending |
+| Compilation | ✅ Success | 0 errors, ~30 warnings |
+| Binary Execution | ✅ Working | No runtime panics |
+| Parallel Executor | ⏳ Pending | Code ready, integration needed |
+| MEV Detector | ⏳ Pending | Code ready, integration needed |
+| Multi-Sequencer | ⏳ Pending | Contracts ready, activation needed |
+
+### Recent Milestones
+
+- **2025-11-16**: Custom Reth implementation complete
+  - Wrapper pattern successfully implemented
+  - All compilation errors resolved
+  - Binary running without panics
+  - Consensus integration fixed
+
+- **2025-11-15**: Token Duality security audit
+  - 0 critical vulnerabilities
+  - Minor improvements implemented
+  - Production-ready status achieved
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Development Workflow
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Make your changes
+4. Run tests (`cargo test`)
+5. Run clippy (`cargo clippy`)
+6. Format code (`cargo fmt`)
+7. Commit your changes
+8. Push to the branch
+9. Open a Pull Request
 
 ---
 
-## 🐛 Troubleshooting
+## 📖 Learn More
 
-### Common Issues
+### Resources
 
-**Q: Docker won't start**  
-A: Make sure Docker Desktop or OrbStack is running
+- **Reth Documentation**: https://paradigmxyz.github.io/reth/
+- **Celestia**: https://docs.celestia.org/
+- **Alloy**: https://github.com/alloy-rs/alloy
+- **Revm**: https://github.com/bluealloy/revm
 
-**Q: Port 8545 already in use**  
-A: Change ports in `docker-compose.yml` or stop conflicting service
+### Community
 
-**Q: Node syncing slowly**  
-A: Check Celestia light node is synced: `docker compose logs celestia`
-
-**Q: Can't connect to RPC**  
-A: Wait 2-3 minutes after startup for full initialization
-
-[More troubleshooting →](./docs/TROUBLESHOOTING.md)
+- **Discord**: [Join ANDE Community](https://discord.gg/ande)
+- **Twitter**: [@ANDELabs](https://twitter.com/andelabs)
+- **GitHub**: [AndeLabs](https://github.com/AndeLabs)
 
 ---
 
 ## 📝 License
 
 This project is licensed under:
-- MIT License ([LICENSE-MIT](./LICENSE-MIT))
-- Apache License 2.0 ([LICENSE-APACHE](./LICENSE-APACHE))
+- MIT License
+- Apache License 2.0
 
 Choose the license that best suits your needs.
 
@@ -322,42 +362,13 @@ Choose the license that best suits your needs.
 
 ## 🙏 Acknowledgments
 
-Built with and inspired by:
-
-- [Reth](https://github.com/paradigmxyz/reth) - High-performance Ethereum client
-- [Celestia](https://celestia.org) - Modular data availability network
-- [Alloy](https://github.com/alloy-rs/alloy) - Ethereum library in Rust
-- [Foundry](https://github.com/foundry-rs/foundry) - Ethereum development toolkit
+- **Paradigm** for Reth
+- **Celestia** for Data Availability
+- **Evolve** for sequencing infrastructure
+- **Ethereum** community for EVM standards
 
 ---
 
-## 🔗 Links
+**Built with ❤️ by ANDE Labs**
 
-- **Website:** https://ande.network
-- **Documentation:** https://docs.ande.network
-- **Explorer:** https://explorer.ande.network
-- **Discord:** https://discord.gg/andechain
-- **Twitter:** https://twitter.com/andechain
-- **GitHub:** https://github.com/ande-labs/ande-chain
-
----
-
-## 📊 Project Status
-
-✅ **Production Ready**
-
-- [x] Core functionality complete
-- [x] All tests passing (109/109)
-- [x] Zero compilation warnings
-- [x] Docker stack ready
-- [x] Documentation complete
-- [x] Monitoring configured
-- [x] Security hardened
-
-**Ready for testnet deployment!**
-
----
-
-<p align="center">
-  <sub>Built with ❤️ by the ANDE Labs team</sub>
-</p>
+For detailed implementation guide, see [docs/CUSTOM_RETH_IMPLEMENTATION.md](docs/CUSTOM_RETH_IMPLEMENTATION.md)

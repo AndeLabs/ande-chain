@@ -41,6 +41,7 @@ alloy-eips.workspace = true
 alloy-consensus.workspace = true
 alloy-rpc-types-txpool.workspace = true
 alloy-genesis.workspace = true
+alloy-evm.workspace = true
 
 # Core dependencies
 serde.workspace = true

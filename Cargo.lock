@@ -956,6 +956,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
+ "alloy-evm",
  "alloy-genesis",
  "alloy-primitives 1.4.1",
  "alloy-rpc-types-engine",
@@ -1041,6 +1042,7 @@ dependencies = [
 name = "ande-reth"
 version = "0.1.0"
 dependencies = [
+ "alloy-evm",
  "alloy-genesis",
  "alloy-primitives 1.4.1",
  "ande-evm",
@@ -1049,7 +1051,9 @@ dependencies = [
  "reth",
  "reth-chainspec",
  "reth-cli-util",
+ "reth-consensus",
  "reth-ethereum",
+ "reth-ethereum-consensus",
  "reth-ethereum-engine-primitives",
  "reth-ethereum-payload-builder",
  "reth-ethereum-primitives",

@@ -7,6 +7,7 @@ pub mod precompile;
 pub mod precompile_config;
 pub mod precompile_inspector;
 pub mod ande_precompile_provider;
+pub mod ande_evm_factory;
 pub mod factory;
 pub mod wrapper;
 pub mod injection;
@@ -24,6 +25,7 @@ pub use precompile::{
 pub use precompile_config::AndePrecompileConfig;
 pub use precompile_inspector::AndePrecompileInspector;
 pub use ande_precompile_provider::AndePrecompileProvider;
+pub use ande_evm_factory::AndeEvmFactory;
 pub use wrapper::AndeEvmConfig;
 pub use factory::create_ande_evm_config;
 pub use injection::{create_ande_precompile_provider, ande_precompile_address};

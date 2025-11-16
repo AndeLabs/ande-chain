@@ -19,8 +19,8 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.83"
+edition = "2024"
+rust-version = "1.88"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/AndeLabs/ande-chain"
 homepage = "https://andelabs.io"
@@ -75,6 +75,7 @@ alloy-eips = { version = "1.0.37", default-features = false }
 alloy-consensus = { version = "1.0.37", default-features = false }
 alloy-rpc-types-txpool = { version = "1.0.37", default-features = false }
 alloy-genesis = { version = "1.0.37", default-features = false }
+alloy-evm = { version = "0.21.0", default-features = false }
 
 # REVM
 revm = "29.0.1"

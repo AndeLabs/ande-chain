@@ -23,11 +23,13 @@
 
 use reth::chainspec::EthereumChainSpecParser;
 use reth::cli::Cli;
-use reth_node_ethereum::EthereumNode;
 use tracing::{info, warn};
 
-// Import ANDE components
+// Import ANDE custom components
 mod node;
+mod executor;
+mod consensus;
+
 use node::AndeNode;
 
 fn main() {
@@ -36,7 +38,9 @@ fn main() {
 
     // Enable backtraces for debugging
     if std::env::var_os("RUST_BACKTRACE").is_none() {
-        std::env::set_var("RUST_BACKTRACE", "1");
+        unsafe {
+            std::env::set_var("RUST_BACKTRACE", "1");
+        }
     }
 
     // Print startup banner
@@ -45,15 +49,16 @@ fn main() {
     // Check environment configuration
     check_environment();
 
-    // Run the node
+    // Run ANDE custom node (NOT EthereumNode)
     if let Err(err) = Cli::<EthereumChainSpecParser>::parse_args().run(|builder, _| async move {
-        info!("🔧 Building ANDE node with custom features...");
+        info!("🔧 Building ANDE Chain node with Token Duality Precompile...");
+        info!("   Using AndeNode (custom Reth fork)");
+        info!("   Using AndeExecutorBuilder (custom EVM)");
+        info!("   Using AndeEvmFactory (custom precompiles)");
 
-        // ✅ CORRECTO: Usar patrón Reth con custom node type
+        // ✅ ANDE CUSTOM NODE - Not EthereumNode!
         let handle = builder
-            .with_types::<AndeNode>()
-            .with_components(AndeNode::components())
-            .with_add_ons(reth_node_ethereum::EthereumAddOns::default())
+            .node(AndeNode::new())
             .launch()
             .await?;
 

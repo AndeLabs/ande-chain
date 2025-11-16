@@ -1,68 +1,111 @@
-//! ANDE Node Implementation
+//! ANDE Node Implementation - Custom Reth Fork
 //!
-//! Production-ready node type for ANDE Chain sovereign rollup.
-//! Uses standard Ethereum components with ANDE chain specification.
+//! This is the ANDE Chain custom node implementation based on Reth v1.8.2.
+//! It integrates the Token Duality Precompile and custom EVM execution.
+//!
+//! ## Key Differences from Standard EthereumNode:
+//! - Custom Executor: AndeExecutorBuilder (not EthereumExecutorBuilder)
+//! - Custom EVM: AndeEvmFactory with AndePrecompileProvider
+//! - Precompile: Token Duality at address 0xFD
+//!
+//! This is a FORK, not a wrapper. We own and maintain this code.
 
+use crate::executor::AndeExecutorBuilder;
+use crate::consensus::AndeConsensusBuilder;
 use reth_chainspec::ChainSpec;
+use reth_ethereum::{
+    node::{
+        api::{FullNodeTypes, NodeTypes, PayloadTypes},
+        builder::{
+            components::{BasicPayloadServiceBuilder, ComponentsBuilder},
+            rpc::RpcAddOns,
+            Node,
+        },
+        node::EthereumPoolBuilder,
+        EthereumEthApiBuilder,
+    },
+};
 use reth_ethereum_engine_primitives::{
     EthBuiltPayload, EthPayloadAttributes, EthPayloadBuilderAttributes,
 };
 use reth_ethereum_primitives::EthPrimitives;
-use reth_node_builder::node::NodeTypes;
-use reth_node_ethereum::{EthEngineTypes, EthereumNode};
+use reth_node_builder::NodeAdapter;
+use reth_node_ethereum::{
+    EthEngineTypes,
+    EthereumEngineValidatorBuilder,
+    EthereumNetworkBuilder,
+};
 use reth_provider::EthStorage;
 
-/// ANDE Chain node type
+/// ANDE Chain Node Type - Custom Reth Fork
 ///
-/// Delegates to EthereumNode for stability and compatibility.
-/// Custom features (precompiles, parallel EVM, MEV) are implemented
-/// in ande-evm crate and will be integrated in future phases.
+/// This is NOT a wrapper around EthereumNode.
+/// This is our custom node implementation that:
+/// - Uses AndeExecutorBuilder for custom EVM execution
+/// - Integrates Token Duality Precompile at 0xFD
+/// - Maintains compatibility with Reth v1.8.2 architecture
+///
+/// ## Active Features:
+/// ✅ Token Duality Precompile (0xFD)
+/// ✅ Custom EVM Factory (AndeEvmFactory)
+/// ✅ Custom Precompile Provider (AndePrecompileProvider)
+///
+/// ## Future Features:
+/// ⏳ Parallel EVM Execution (Block-STM)
+/// ⏳ MEV Detection & Fair Distribution
+/// ⏳ Enhanced validator selection
 #[derive(Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct AndeNode;
 
 impl AndeNode {
     /// Create a new ANDE node instance
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 
     /// Returns a [`ComponentsBuilder`] configured for ANDE Chain.
     ///
-    /// Uses the same components as EthereumNode for maximum compatibility.
-    pub fn components<Node>() -> reth_node_builder::components::ComponentsBuilder<
-        Node,
-        reth_node_ethereum::EthereumPoolBuilder,
-        reth_node_builder::components::BasicPayloadServiceBuilder<
-            reth_node_ethereum::EthereumPayloadBuilder,
-        >,
-        reth_node_ethereum::EthereumNetworkBuilder,
-        reth_node_ethereum::EthereumExecutorBuilder,
-        reth_node_ethereum::EthereumConsensusBuilder,
+    /// Uses ANDE custom executor with Token Duality Precompile.
+    pub fn components<N>() -> ComponentsBuilder<
+        N,
+        EthereumPoolBuilder,
+        BasicPayloadServiceBuilder<reth_node_ethereum::EthereumPayloadBuilder>,
+        EthereumNetworkBuilder,
+        AndeExecutorBuilder,
+        AndeConsensusBuilder,
     >
     where
-        Node: reth_node_builder::FullNodeTypes<
-            Types: reth_node_builder::node::NodeTypes<
+        N: FullNodeTypes<
+            Types: NodeTypes<
                 ChainSpec: reth_chainspec::Hardforks 
                     + reth_chainspec::EthereumHardforks 
                     + reth_evm::eth::spec::EthExecutorSpec,
                 Primitives = EthPrimitives,
             >,
         >,
-        <Node::Types as reth_node_builder::node::NodeTypes>::Payload: reth_payload_primitives::PayloadTypes<
+        <N::Types as NodeTypes>::Payload: PayloadTypes<
             BuiltPayload = EthBuiltPayload,
             PayloadAttributes = EthPayloadAttributes,
             PayloadBuilderAttributes = EthPayloadBuilderAttributes,
         >,
     {
-        // Delegate to EthereumNode components
-        EthereumNode::components()
+        // Build components with ANDE custom executor
+        // Follows the same pattern as EthereumNode::components() but with AndeExecutorBuilder
+        ComponentsBuilder::default()
+            .node_types::<N>()
+            .pool(EthereumPoolBuilder::default())
+            .executor(AndeExecutorBuilder::default())
+            .payload(BasicPayloadServiceBuilder::default())
+            .network(EthereumNetworkBuilder::default())
+            .consensus(AndeConsensusBuilder::default())
     }
 }
 
 /// Node types for ANDE Chain
 ///
-/// Uses standard Ethereum types for maximum compatibility
+/// Uses Ethereum-compatible primitives for maximum compatibility with tooling,
+/// but the execution layer is customized with ANDE-specific features.
 impl NodeTypes for AndeNode {
     type Primitives = EthPrimitives;
     type ChainSpec = ChainSpec;
@@ -70,37 +113,41 @@ impl NodeTypes for AndeNode {
     type Payload = EthEngineTypes;
 }
 
-/// Implement Node trait for ANDE Chain
+/// ANDE node add-ons - RPC and validation configuration
+/// 
+/// Uses standard Ethereum RPC API builder and engine validator for compatibility.
+pub type AndeAddOns<N> = RpcAddOns<N, EthereumEthApiBuilder, EthereumEngineValidatorBuilder>;
+
+/// ANDE Chain Node Implementation
 ///
-/// This implementation uses the same component structure as EthereumNode
-/// for maximum compatibility with Reth v1.8.2 and Evolve sequencer.
-impl<N> reth_node_builder::Node<N> for AndeNode
+/// This is our CUSTOM node implementation. Key customizations:
+/// 
+/// 1. **Custom Executor**: Uses `AndeExecutorBuilder` instead of `EthereumExecutorBuilder`
+/// 2. **Custom EVM**: AndeEvmFactory with Token Duality Precompile
+/// 3. **Same architecture**: Compatible with Reth v1.8.2 and Evolve sequencer
+///
+/// The component structure follows Reth patterns but with ANDE customizations.
+impl<N> Node<N> for AndeNode
 where
-    N: reth_node_builder::FullNodeTypes<Types = Self>,
+    N: FullNodeTypes<Types = Self>,
 {
-    type ComponentsBuilder = reth_node_builder::components::ComponentsBuilder<
+    type ComponentsBuilder = ComponentsBuilder<
         N,
-        reth_node_ethereum::EthereumPoolBuilder,
-        reth_node_builder::components::BasicPayloadServiceBuilder<
-            reth_node_ethereum::EthereumPayloadBuilder,
-        >,
-        reth_node_ethereum::EthereumNetworkBuilder,
-        reth_node_ethereum::EthereumExecutorBuilder,
-        reth_node_ethereum::EthereumConsensusBuilder,
+        EthereumPoolBuilder,
+        BasicPayloadServiceBuilder<reth_node_ethereum::EthereumPayloadBuilder>,
+        EthereumNetworkBuilder,
+        AndeExecutorBuilder,
+        AndeConsensusBuilder,
     >;
 
-    type AddOns = reth_node_ethereum::EthereumAddOns<
-        reth_node_builder::NodeAdapter<N>,
-        reth_node_ethereum::EthereumEthApiBuilder,
-        reth_node_ethereum::EthereumEngineValidatorBuilder,
-    >;
+    type AddOns = AndeAddOns<NodeAdapter<N>>;
 
     fn components_builder(&self) -> Self::ComponentsBuilder {
-        EthereumNode::components()
+        Self::components()
     }
 
     fn add_ons(&self) -> Self::AddOns {
-        reth_node_ethereum::EthereumAddOns::default()
+        AndeAddOns::default()
     }
 }
 

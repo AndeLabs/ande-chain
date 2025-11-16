@@ -10,7 +10,6 @@ use std::{
 use alloy_primitives::{Address, U256};
 use parking_lot::RwLock;
 use tokio::sync::Semaphore;
-use eyre::Result;
 
 /// Optimal worker count based on available CPU cores
 pub fn optimal_worker_count() -> usize {

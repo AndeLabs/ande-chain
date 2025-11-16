@@ -8,7 +8,6 @@
 use alloy_primitives::U256;
 use revm::primitives::hardfork::SpecId;
 use revm::context::CfgEnv;  // Reth 1.8.2 / REVM 29 correct path
-use revm_context_interface::cfg::AnalysisKind;
 
 /// Default maximum bytes for txpool selection (1.85 MiB)
 pub const DEFAULT_MAX_TXPOOL_BYTES: u64 = 1_939_865;

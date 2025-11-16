@@ -11,8 +11,8 @@ use tracing::{debug, info, warn};
 
 /// Wrapper for consensus engine integration with ande-node
 pub struct ConsensusIntegration {
-    /// The consensus engine
-    engine: Arc<RwLock<ConsensusEngine>>,
+    /// The consensus engine (None when disabled)
+    engine: Option<Arc<RwLock<ConsensusEngine>>>,
 
     /// Whether consensus is enabled
     enabled: bool,
@@ -37,7 +37,7 @@ impl ConsensusIntegration {
         );
 
         let engine = ConsensusEngine::new(config).await?;
-        let engine = Arc::new(RwLock::new(engine));
+        let engine = Some(Arc::new(RwLock::new(engine)));
 
         Ok(Self {
             engine,
@@ -49,7 +49,7 @@ impl ConsensusIntegration {
     /// Create a disabled consensus integration (for testing or single-sequencer mode)
     pub fn disabled() -> Self {
         Self {
-            engine: Arc::new(RwLock::new(unsafe { std::mem::zeroed() })),
+            engine: None,
             enabled: false,
             sequencer_address: Address::ZERO,
         }
@@ -63,8 +63,10 @@ impl ConsensusIntegration {
         }
 
         info!("Starting consensus engine");
-        let engine = self.engine.read().await;
-        engine.start().await?;
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            engine.start().await?;
+        }
 
         info!("✅ Consensus engine started successfully");
         Ok(())
@@ -77,8 +79,10 @@ impl ConsensusIntegration {
         }
 
         info!("Stopping consensus engine");
-        let engine = self.engine.read().await;
-        engine.stop().await;
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            engine.stop().await;
+        }
     }
 
     /// Check if this node should produce the next block
@@ -88,8 +92,12 @@ impl ConsensusIntegration {
             return true;
         }
 
-        let engine = self.engine.read().await;
-        engine.am_i_proposer().await
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            engine.am_i_proposer().await
+        } else {
+            true
+        }
     }
 
     /// Get current proposer address
@@ -98,8 +106,12 @@ impl ConsensusIntegration {
             return Some(self.sequencer_address);
         }
 
-        let engine = self.engine.read().await;
-        engine.get_current_proposer().await
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            engine.get_current_proposer().await
+        } else {
+            Some(self.sequencer_address)
+        }
     }
 
     /// Verify block proposer
@@ -108,8 +120,12 @@ impl ConsensusIntegration {
             return Ok(());
         }
 
-        let engine = self.engine.read().await;
-        engine.verify_block_proposer(producer).await
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            engine.verify_block_proposer(producer).await
+        } else {
+            Ok(())
+        }
     }
 
     /// Record successful block production
@@ -124,8 +140,12 @@ impl ConsensusIntegration {
             "Recording block production"
         );
 
-        let engine = self.engine.read().await;
-        engine.record_block_produced(producer, block_number).await
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            engine.record_block_produced(producer, block_number).await
+        } else {
+            Ok(())
+        }
     }
 
     /// Record missed block
@@ -136,8 +156,12 @@ impl ConsensusIntegration {
 
         warn!(validator = ?validator, "Recording missed block");
 
-        let engine = self.engine.read().await;
-        engine.record_block_missed(validator).await
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            engine.record_block_missed(validator).await
+        } else {
+            Ok(())
+        }
     }
 
     /// Handle timeout condition
@@ -148,11 +172,13 @@ impl ConsensusIntegration {
 
         warn!("Handling timeout - forcing rotation");
 
-        let engine = self.engine.read().await;
-        let timeout = engine.check_timeout().await?;
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            let timeout = engine.check_timeout().await?;
 
-        if timeout {
-            engine.force_rotation("timeout").await?;
+            if timeout {
+                engine.force_rotation("timeout").await?;
+            }
         }
 
         Ok(())
@@ -164,8 +190,12 @@ impl ConsensusIntegration {
             return None;
         }
 
-        let engine = self.engine.read().await;
-        Some(engine.get_state().await)
+        if let Some(ref engine) = self.engine {
+            let engine = engine.read().await;
+            Some(engine.get_state().await)
+        } else {
+            None
+        }
     }
 
     /// Check if consensus is enabled
