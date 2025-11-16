@@ -1,9 +1,9 @@
-# syntax=docker/dockerfile:1.4
 # =============================================================================
 # ANDE CHAIN - PRODUCTION OPTIMIZED DOCKERFILE
-# Multi-stage build for ande-node with enhanced security and performance
+# Multi-stage build for ande-reth with enhanced security and performance
 # Base: Reth v1.8.2 + Custom EVM (ANDE Precompile + Parallel Execution + MEV)
 # Target: ~100MB final image, optimized for production deployment
+# Compatible with Docker Legacy Builder and BuildKit
 # =============================================================================
 
 ARG RUST_VERSION=1.83
@@ -12,11 +12,9 @@ ARG DEBIAN_VERSION=bookworm
 # =============================================================================
 # BUILDER STAGE: Maximum Performance Optimized Build
 # =============================================================================
-FROM --platform=$BUILDPLATFORM rust:${RUST_VERSION}-slim-${DEBIAN_VERSION} AS builder
+FROM rust:${RUST_VERSION}-slim-${DEBIAN_VERSION} AS builder
 
 # Build arguments
-ARG TARGETOS
-ARG TARGETARCH
 ARG BUILD_PROFILE=maxperf
 ARG FEATURES="jemalloc asm-keccak"
 
@@ -64,9 +62,7 @@ COPY tests ./tests
 # Integra AndePrecompileProvider en 0xFD directamente en el EVM.
 #
 # Ver: docs/PRECOMPILE_INTEGRATION_FINDINGS.md
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/build/target \
-    cargo build \
+RUN cargo build \
         --profile ${BUILD_PROFILE} \
         --bin ande-reth \
         --features "${FEATURES}" \
