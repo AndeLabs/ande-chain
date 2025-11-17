@@ -15,7 +15,7 @@ use crate::consensus::AndeConsensusBuilder;
 use reth_chainspec::ChainSpec;
 use reth_ethereum::{
     node::{
-        api::{FullNodeTypes, NodeTypes, PayloadTypes},
+        api::{FullNodeTypes, NodeTypes},
         builder::{
             components::{BasicPayloadServiceBuilder, ComponentsBuilder},
             rpc::RpcAddOns,
@@ -25,15 +25,13 @@ use reth_ethereum::{
         EthereumEthApiBuilder,
     },
 };
-use reth_ethereum_engine_primitives::{
-    EthBuiltPayload, EthPayloadAttributes, EthPayloadBuilderAttributes,
-};
 use reth_ethereum_primitives::EthPrimitives;
 use reth_node_builder::NodeAdapter;
 use reth_node_ethereum::{
     EthEngineTypes,
     EthereumEngineValidatorBuilder,
     EthereumNetworkBuilder,
+    EthereumPayloadBuilder,
 };
 use reth_provider::EthStorage;
 
@@ -62,43 +60,6 @@ impl AndeNode {
     /// Create a new ANDE node instance
     pub const fn new() -> Self {
         Self
-    }
-
-    /// Returns a [`ComponentsBuilder`] configured for ANDE Chain.
-    ///
-    /// Uses ANDE custom executor with Token Duality Precompile.
-    pub fn components<N>() -> ComponentsBuilder<
-        N,
-        EthereumPoolBuilder,
-        BasicPayloadServiceBuilder<reth_node_ethereum::EthereumPayloadBuilder>,
-        EthereumNetworkBuilder,
-        AndeExecutorBuilder,
-        AndeConsensusBuilder,
-    >
-    where
-        N: FullNodeTypes<
-            Types: NodeTypes<
-                ChainSpec: reth_chainspec::Hardforks 
-                    + reth_chainspec::EthereumHardforks 
-                    + reth_evm::eth::spec::EthExecutorSpec,
-                Primitives = EthPrimitives,
-            >,
-        >,
-        <N::Types as NodeTypes>::Payload: PayloadTypes<
-            BuiltPayload = EthBuiltPayload,
-            PayloadAttributes = EthPayloadAttributes,
-            PayloadBuilderAttributes = EthPayloadBuilderAttributes,
-        >,
-    {
-        // Build components with ANDE custom executor
-        // Follows the same pattern as EthereumNode::components() but with AndeExecutorBuilder
-        ComponentsBuilder::default()
-            .node_types::<N>()
-            .pool(EthereumPoolBuilder::default())
-            .executor(AndeExecutorBuilder::default())
-            .payload(BasicPayloadServiceBuilder::default())
-            .network(EthereumNetworkBuilder::default())
-            .consensus(AndeConsensusBuilder::default())
     }
 }
 
@@ -134,7 +95,7 @@ where
     type ComponentsBuilder = ComponentsBuilder<
         N,
         EthereumPoolBuilder,
-        BasicPayloadServiceBuilder<reth_node_ethereum::EthereumPayloadBuilder>,
+        BasicPayloadServiceBuilder<EthereumPayloadBuilder>,
         EthereumNetworkBuilder,
         AndeExecutorBuilder,
         AndeConsensusBuilder,
@@ -143,7 +104,13 @@ where
     type AddOns = AndeAddOns<NodeAdapter<N>>;
 
     fn components_builder(&self) -> Self::ComponentsBuilder {
-        Self::components()
+        ComponentsBuilder::default()
+            .node_types::<N>()
+            .pool(EthereumPoolBuilder::default())
+            .executor(AndeExecutorBuilder::default())
+            .payload(BasicPayloadServiceBuilder::new(EthereumPayloadBuilder::default()))
+            .network(EthereumNetworkBuilder::default())
+            .consensus(AndeConsensusBuilder::default())
     }
 
     fn add_ons(&self) -> Self::AddOns {

@@ -188,14 +188,25 @@ impl ConsensusEngine {
         Ok(())
     }
 
-    /// Get current proposer address
-    pub async fn get_current_proposer(&self) -> Option<Address> {
+    /// Get current proposer address (without block number)
+    pub async fn current_proposer(&self) -> Option<Address> {
         self.validator_set.read().await.current_proposer()
+    }
+
+    /// Get proposer for specific block number
+    pub async fn get_current_proposer(&self, _block_number: u64) -> Result<Address> {
+        // For now, return current proposer
+        // TODO: Implement historical proposer lookup based on block number
+        self.validator_set
+            .read()
+            .await
+            .current_proposer()
+            .ok_or_else(|| ConsensusError::Internal("No proposer available".to_string()))
     }
 
     /// Check if this node is the current proposer
     pub async fn am_i_proposer(&self) -> bool {
-        self.get_current_proposer()
+        self.current_proposer()
             .await
             .map_or(false, |proposer| proposer == self.config.sequencer_address)
     }

@@ -17,6 +17,7 @@ path = "src/main.rs"
 # Internal crates
 ande-evm = { workspace = true }
 ande-primitives = { workspace = true }
+ande-consensus = { workspace = true }
 
 # Reth node dependencies
 reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
@@ -32,6 +33,8 @@ reth-ethereum-engine-primitives = { git = "https://github.com/paradigmxyz/reth.g
 reth-ethereum-payload-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
 reth-ethereum-consensus = { workspace = true }
 reth-consensus = { workspace = true }
+reth-consensus-common = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
+reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }
 reth-evm = { workspace = true }
 reth-evm-ethereum = { workspace = true }
 reth-payload-builder = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.8.2" }

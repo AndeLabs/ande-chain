@@ -6,7 +6,7 @@
 //! - (Future) MEV-aware execution ordering
 
 use ande_evm::AndeEvmFactory;
-use reth_chainspec::{ChainSpec, EthChainSpec, EthereumHardforks, Hardforks};
+use reth_chainspec::{EthChainSpec, EthereumHardforks, Hardforks};
 use reth_ethereum::evm::EthEvmConfig;
 use reth_ethereum_primitives::EthPrimitives;
 use reth_evm::eth::spec::EthExecutorSpec;

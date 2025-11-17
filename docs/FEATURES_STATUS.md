@@ -49,16 +49,24 @@ AndeEvmFactory::new(spec_id)
   - ✅ `AndeEvmFactory` - Wrapper con precompiles
   - ✅ `AndeConsensusBuilder` - Consensus builder
 
-#### 3. **Multi-Sequencer Consensus (CometBFT)**
-- **Estado**: ✅ **Código implementado**
-- **Ubicación**: `crates/ande-consensus/`
+#### 3. **BFT Multi-Validator Consensus**
+- **Estado**: ✅ **COMPLETAMENTE INTEGRADO Y ACTIVO** (2025-01-16)
+- **Ubicación**: `crates/ande-reth/src/consensus.rs`
+- **Implementación**: `AndeConsensus` wrapper siguiendo patrón evstack
 - **Componentes**:
-  - ✅ `ConsensusEngine` - Motor de consenso
-  - ✅ `ValidatorSet` - Gestión de validadores
-  - ✅ `ContractClient` - Cliente para staking contract
-  - ✅ `ConsensusMetrics` - Métricas y monitoreo
-- **Estado**: ⚠️ **NO INTEGRADO** en el executor principal aún
-- **Próximo paso**: Integrar en `AndeExecutorBuilder`
+  - ✅ `AndeConsensus` - Wrapper sobre EthBeaconConsensus con BFT
+  - ✅ `AndeConsensusBuilder` - Builder integrado en AndeNode
+  - ✅ `ConsensusEngine` - Motor BFT con validator set
+  - ✅ `ValidatorSet` - Gestión stake-weighted de validadores
+  - ✅ `ProposerSelection` - Weighted round-robin
+  - ✅ Proposer validation en cada bloque
+  - ✅ 2/3+ voting power threshold
+- **Configuración** (opcional via env vars):
+  - `ANDE_CONSENSUS_ENABLED=true`
+  - `ANDE_VALIDATOR_ADDRESS=0x...`
+  - `ANDE_VALIDATOR_STAKE=1000000000000000000`
+  - `ANDE_CONSENSUS_CONTRACT=0x...` (opcional)
+- **Documentación**: `docs/BFT_CONSENSUS_INTEGRATION.md`
 
 ---
 
