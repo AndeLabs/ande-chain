@@ -32,18 +32,14 @@
 //! - Celestia Data Availability
 
 use ande_node::consensus_integration::{ConsensusIntegration, ConsensusIntegrationBuilder};
-use ande_consensus::{ConsensusConfig, types::ConsensusState};
+use ande_consensus::ConsensusConfig;
 use ande_evm::{
     evm_config::{ande_token_duality_precompile, ANDE_PRECOMPILE_ADDRESS},
     parallel_executor::ParallelExecutor,
-    mev::MevDetector,
     config::AndeEvmConfig,
 };
-use alloy_primitives::{Address, U256};
 use alloy_genesis::Genesis;
 use reth_chainspec::{ChainSpec, ChainSpecBuilder};
-use reth_node_api::ConfigureEvm;
-use reth_primitives::{Header, Transaction};
 use std::sync::Arc;
 use tracing::{info, error, warn};
 use tokio::runtime::Runtime;

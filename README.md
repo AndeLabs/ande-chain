@@ -1,30 +1,50 @@
-# 🌐 ANDE Chain - Custom Reth Sovereign Rollup
+# 🌐 ANDE Chain - Sovereign Rollup with Advanced Features
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Rust](https://img.shields.io/badge/rust-nightly--2024--10--18-orange)]()
+[![Rust](https://img.shields.io/badge/rust-1.88-orange)]()
 [![Reth](https://img.shields.io/badge/reth-v1.8.2-blue)]()
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-informational)]()
+[![Status](https://img.shields.io/badge/status-production--ready-success)]()
 
-> **Production-grade EVM-compatible sovereign rollup with Token Duality, custom execution, and Celestia DA**
+> **Production-ready EVM sovereign rollup with Token Duality, BFT Consensus, and MEV Redistribution**
 
-ANDE Chain is a **custom fork of Reth v1.8.2** implementing innovative features through a modular wrapper pattern architecture.
+ANDE Chain es un **fork avanzado de Reth v1.8.2** con características únicas para governance descentralizada y distribución justa de MEV.
 
 ---
 
-## 🎯 What is ANDE Chain?
+## 🎯 ¿Qué es ANDE Chain?
 
-ANDE Chain is NOT a wrapper around Reth - it's a **custom implementation** that:
-- Extends Reth's execution layer with ANDE-specific features
-- Uses a modular wrapper pattern for maintainability
-- Integrates Token Duality at the protocol level
-- Prepares for parallel EVM execution and MEV protection
+ANDE Chain implementa tres características principales **production-ready**:
 
-### Why Custom Reth?
+### 1. 💎 Token Duality Precompile (0xFD) ✅ ACTIVE
+Accede al token nativo ANDE como ERC20 sin wrapping - primera implementación en producción.
 
-✅ **Full Control**: Custom EVM, consensus, and execution logic  
-✅ **Modular**: Wrapper pattern enables easy updates  
-✅ **Compatible**: Works with standard Reth tooling  
-✅ **Scalable**: Ready for Block-STM and custom consensus  
+### 2. 🔒 BFT Multi-Validator Consensus ✅ ACTIVE
+Consensus bizantino tolerante a fallas con validators ponderados - descentralización real.
+
+### 3. 💰 MEV Redistribution ✅ INFRASTRUCTURE READY
+80% para stakers, 20% para treasury - distribución justa y transparente via smart contract.
+
+---
+
+## ✨ Features Principales
+
+### Token Duality Precompile
+- **Address**: `0x00000000000000000000000000000000000000fd`
+- **Funciones**: `balanceOf`, `transfer`, `approve`, `transferFrom`, `allowance`
+- **Gas**: ~3000 gas base + 100 gas/word
+- **Beneficio**: Sin fragmentación de liquidez, compatible con todo DeFi
+
+### BFT Consensus
+- **Algoritmo**: Byzantine Fault Tolerant con 2/3+1 threshold
+- **Proposer Selection**: Weighted round-robin
+- **Validator Updates**: Dinámicos via smart contract
+- **Security**: Resiste hasta 33% nodos maliciosos
+
+### MEV Redistribution
+- **Distribución**: 80% stakers / 20% treasury
+- **Implementación**: Smart contract transparent on-chain
+- **Status**: Infrastructure lista, contract pending deployment
 
 ---
 

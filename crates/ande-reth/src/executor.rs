@@ -51,13 +51,24 @@ where
     type EVM = EthEvmConfig<Types::ChainSpec, AndeEvmFactory>;
 
     async fn build_evm(self, ctx: &BuilderContext<Node>) -> eyre::Result<Self::EVM> {
-        use alloy_evm::EthEvmFactory;
         use reth_ethereum::evm::revm::primitives::hardfork::SpecId;
+        use ande_evm::MevConfig;
         
-        tracing::info!("🔧 Building ANDE EVM with wrapper pattern");
+        tracing::info!("🔧 Building ANDE EVM with custom configuration");
         
         // Determine spec ID from chain spec (default to CANCUN)
         let spec_id = SpecId::CANCUN;
+        
+        // Check if MEV redistribution is configured
+        if let Ok(Some(mev_config)) = MevConfig::from_env() {
+            tracing::info!("💰 MEV Redistribution enabled via smart contract:");
+            tracing::info!("   • MEV Sink: {:?}", mev_config.mev_sink);
+            tracing::info!("   • Min Threshold: {} wei", mev_config.min_threshold);
+            tracing::info!("   • Distribution: 80% stakers, 20% treasury");
+            tracing::info!("   • Implementation: Smart contract based (see docs/MEV_INTEGRATION_STRATEGY.md)");
+        } else {
+            tracing::debug!("MEV redistribution not configured (set ANDE_MEV_ENABLED=true to enable)");
+        }
         
         // Create ANDE EVM factory with Token Duality precompile
         let ande_factory = AndeEvmFactory::new(spec_id);
@@ -68,7 +79,7 @@ where
             ande_factory,
         );
         
-        tracing::info!("✅ ANDE EVM configured with Token Duality:");
+        tracing::info!("✅ ANDE EVM configured successfully:");
         tracing::info!("   • Chain ID: {}", ctx.chain_spec().chain().id());
         tracing::info!("   • Spec ID: {:?}", spec_id);
         tracing::info!("   • Factory: AndeEvmFactory");

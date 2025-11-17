@@ -47,4 +47,4 @@ pub use evm_config::{
 };
 pub use parallel_executor::{ParallelExecutor, TxExecutionResult, optimal_worker_count};
 pub use types::{EvolvePayloadAttributes, PayloadAttributesError};
-pub use mev::{AndeHandler, AndeMevRedirect, MevDetection, MevRedirectError, MevType};
+pub use mev::{AndeHandler, AndeMevRedirect, MevDetection, MevRedirectError, MevType, MevConfig, MevConfigError};

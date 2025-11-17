@@ -7,7 +7,7 @@
 //!
 //! - `redirect`: MEV redirect policy and detection
 //! - `handler`: Execution handler with MEV interception
-//! - `config`: MEV configuration from environment (TODO)
+//! - `config`: MEV configuration from environment
 //!
 //! ## Usage
 //!
@@ -26,6 +26,8 @@
 
 pub mod redirect;
 pub mod handler;
+pub mod config;
 
 pub use redirect::{AndeMevRedirect, MevDetection, MevRedirectError, MevType};
 pub use handler::AndeHandler;
+pub use config::{MevConfig, MevConfigError};

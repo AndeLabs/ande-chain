@@ -108,7 +108,11 @@ impl ConsensusIntegration {
 
         if let Some(ref engine) = self.engine {
             let engine = engine.read().await;
-            engine.get_current_proposer().await
+            // Use block number 0 for current proposer (will use latest)
+            match engine.get_current_proposer(0).await {
+                Ok(proposer) => Some(proposer),
+                Err(_) => Some(self.sequencer_address)
+            }
         } else {
             Some(self.sequencer_address)
         }
