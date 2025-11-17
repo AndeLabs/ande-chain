@@ -112,7 +112,7 @@ pub fn ande_token_duality_precompile() -> Precompile {
 /// - Only callable by ANDEToken contract
 /// - Validates sufficient balance
 /// - Prevents transfer to address(0)
-fn ande_token_duality_run(input: &[u8], gas_limit: u64) -> PrecompileResult {
+pub fn ande_token_duality_run(input: &[u8], gas_limit: u64) -> PrecompileResult {
     // Calculate gas cost
     let input_len = input.len() as u64;
     let words = (input_len + 31) / 32;
