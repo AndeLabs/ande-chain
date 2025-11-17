@@ -59,23 +59,20 @@ where
         // Determine spec ID from chain spec (default to CANCUN)
         let spec_id = SpecId::CANCUN;
         
-        // Create ANDE EVM factory (wrapper pattern)
-        // Wraps standard EthEvmFactory and will inject precompiles
-        let inner_factory = EthEvmFactory::default();
-        let ande_factory = AndeEvmFactory::new(inner_factory, spec_id);
+        // Create ANDE EVM factory with Token Duality precompile
+        let ande_factory = AndeEvmFactory::new(spec_id);
         
-        // Create EthEvmConfig with our wrapper factory
+        // Create EthEvmConfig with our ANDE factory
         let evm_config = EthEvmConfig::new_with_evm_factory(
             ctx.chain_spec().clone(),
             ande_factory,
         );
         
-        tracing::info!("✅ ANDE EVM configured (wrapper pattern):");
+        tracing::info!("✅ ANDE EVM configured with Token Duality:");
         tracing::info!("   • Chain ID: {}", ctx.chain_spec().chain().id());
         tracing::info!("   • Spec ID: {:?}", spec_id);
-        tracing::info!("   • Inner Factory: EthEvmFactory");
-        tracing::info!("   • Wrapper: AndeEvmFactory");
-        tracing::info!("   • Precompiles: Standard + ANDE (pending injection)");
+        tracing::info!("   • Factory: AndeEvmFactory");
+        tracing::info!("   • Precompiles: Standard Ethereum + ANDE Token Duality (0xFD)");
         
         Ok(evm_config)
     }
