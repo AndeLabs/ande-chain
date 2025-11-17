@@ -21,7 +21,7 @@
 
 use alloy_evm::{
     eth::{EthEvmBuilder, EthEvmContext},
-    precompiles::PrecompilesMap,
+    precompiles::{PrecompilesMap, Precompile, DynPrecompile},
     EvmEnv, EvmFactory,
 };
 use reth_ethereum::evm::{
@@ -128,32 +128,36 @@ impl EvmFactory for AndeEvmFactory {
 impl AndeEvmFactory {
     /// Creates a PrecompilesMap with standard Ethereum precompiles + ANDE Token Duality
     fn create_ande_precompiles(&self) -> PrecompilesMap {
-        use revm_precompile::{PrecompileSpecId, Precompiles, PrecompileId};
-        use alloy_evm::precompiles::{DynPrecompile, PrecompileInput};
-        use super::precompile::{ANDE_PRECOMPILE_ADDRESS, ande_token_duality_run};
+        use revm_precompile::{PrecompileSpecId, Precompiles};
+        use alloy_evm::precompiles::DynPrecompile;
+        use super::ande_token_duality::{AndeTokenDualityPrecompile, ANDE_PRECOMPILE_ADDRESS};
+        use std::sync::Arc;
         
         // Start with standard Ethereum precompiles
         let map = PrecompilesMap::from_static(Precompiles::new(
             PrecompileSpecId::from_spec_id(self.spec_id)
         ));
         
+        // Create ANDE Token Duality precompile instance
+        // Load config from environment or use defaults
+        let ande_precompile = Arc::new(AndeTokenDualityPrecompile::from_env());
+        let precompile_id = AndeTokenDualityPrecompile::id().clone();
+        
         // Add ANDE Token Duality precompile at 0xFD using apply_precompile
-        // This method allows adding custom precompiles to the map
-        let map = map.with_applied_precompile(&ANDE_PRECOMPILE_ADDRESS, |_| {
-            // Wrap our precompile function to match the expected signature
-            // PrecompileInput has: data, gas, caller, value, address, bytecode_address
-            // Our function expects: (&[u8], u64) -> PrecompileResult
-            Some(DynPrecompile::new(
-                PrecompileId::custom("ANDE"),
-                |input: PrecompileInput<'_>| {
-                    ande_token_duality_run(input.data, input.gas)
-                }
-            ))
+        // Following evstack pattern with new_stateful for state access
+        let map = map.with_applied_precompile(&ANDE_PRECOMPILE_ADDRESS, move |_| {
+            let precompile_clone = Arc::clone(&ande_precompile);
+            let id_clone = precompile_id.clone();
+            
+            Some(DynPrecompile::new_stateful(id_clone, move |input| {
+                precompile_clone.call(input)
+            }))
         });
         
         tracing::info!(
             address = ?ANDE_PRECOMPILE_ADDRESS,
-            "✅ Added ANDE Token Duality precompile"
+            spec_id = ?self.spec_id,
+            "✅ ANDE Token Duality precompile integrated (with EvmInternals + security features)"
         );
         
         map
