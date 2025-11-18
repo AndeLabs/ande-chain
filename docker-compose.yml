@@ -151,6 +151,15 @@ services:
       - ANDE_ENABLE_MEV_DETECTION=${ENABLE_MEV_DETECTION:-true}
       - ANDE_PRECOMPILE_ADDRESS=0x00000000000000000000000000000000000000FD
       - MAX_PEERS=${MAX_PEERS:-50}
+      # BFT Consensus Configuration
+      - CONSENSUS_CONTRACT=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+      - COORDINATOR_CONTRACT=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+      - REGISTRY_CONTRACT=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+      - SEQUENCER_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+      - CONSENSUS_RPC_URL=http://localhost:8545
+      - CONSENSUS_WS_URL=ws://localhost:8546
+      - CHAIN_ID=6174
+      - BLOCKS_PER_ROTATION=100
     deploy:
       resources:
         limits:
@@ -184,9 +193,9 @@ services:
     healthcheck:
       test: ["CMD", "sh", "-c", "wget -q -O- --post-data='{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}' --header='Content-Type:application/json' http://localhost:8545 || exit 1"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 5
-      start_period: 60s
+      start_period: 120s
     networks:
       - andechain
     logging:
@@ -473,9 +482,12 @@ services:
       - BLOCKSCOUT_PROTOCOL=http
       - SHOW_TESTNET_LABEL=true
       - AVERAGE_BLOCK_TIME=5
-      - POOL_SIZE=30
+      - POOL_SIZE=20
       - INDEXER_DISABLE_INTERNAL_TRANSACTIONS_FETCHER=true
       - INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER=true
+      - INDEXER_DISABLE_BLOCK_REWARD_FETCHER=true
+      - INDEXER_CATCHUP_BLOCKS_BATCH_SIZE=10
+      - INDEXER_CATCHUP_BLOCKS_CONCURRENCY=1
       - SECRET_KEY_BASE=${BLOCKSCOUT_SECRET:-CHANGE_ME_IN_PRODUCTION}
       - API_RATE_LIMIT=50
     networks:
