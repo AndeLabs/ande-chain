@@ -61,6 +61,7 @@ ande-primitives.workspace = true
 parking_lot = "0.12"
 num_cpus = "1.16"
 futures = "0.3"
+lru = "0.12"
 
 [dev-dependencies]
 serde_json.workspace = true

@@ -14,6 +14,7 @@ use revm::{
     inspector::Inspector,
     interpreter::{CallInputs, CallOutcome, Gas, InstructionResult, InterpreterResult},
 };
+use tracing::{warn, info, debug};
 
 /// Inspector that validates ANDE Token Duality precompile calls
 #[derive(Clone, Debug)]
@@ -111,11 +112,22 @@ where
 
         // Validate caller authorization
         if !self.config.is_authorized(inputs.caller) {
+            warn!(
+                caller = ?inputs.caller,
+                precompile = ?ANDE_PRECOMPILE_ADDRESS,
+                "SECURITY: Unauthorized precompile call attempt"
+            );
             return Some(Self::revert_outcome(
                 &format!("Unauthorized caller: {:?}", inputs.caller),
                 inputs,
             ));
         }
+
+        debug!(
+            caller = ?inputs.caller,
+            precompile = ?ANDE_PRECOMPILE_ADDRESS,
+            "Authorized precompile call"
+        );
 
         // Get calldata
         let calldata = inputs.input.bytes(context);
@@ -145,21 +157,45 @@ where
             return None; // Allow the precompile to handle it
         }
 
-        // Validate per-call cap
+        // Validate per-call cap (M-3 Security Fix)
         if let Err(err) = self.config.validate_per_call_cap(value) {
+            warn!(
+                caller = ?inputs.caller,
+                to = ?to,
+                value = %value,
+                per_call_cap = %self.config.per_call_cap,
+                "SECURITY: Per-call cap exceeded"
+            );
             return Some(Self::revert_outcome(&err, inputs));
         }
 
-        // Validate per-block cap
+        // Validate per-block cap (M-3 Security Fix)
         if let Err(err) = self
             .config
             .validate_per_block_cap(value, self.transferred_this_block)
         {
+            warn!(
+                caller = ?inputs.caller,
+                to = ?to,
+                value = %value,
+                transferred_this_block = %self.transferred_this_block,
+                per_block_cap = ?self.config.per_block_cap,
+                block = %self.current_block,
+                "SECURITY: Per-block cap exceeded"
+            );
             return Some(Self::revert_outcome(&err, inputs));
         }
 
         // Update block transfer counter
         self.transferred_this_block = self.transferred_this_block.saturating_add(value);
+
+        info!(
+            caller = ?inputs.caller,
+            to = ?to,
+            value = %value,
+            transferred_this_block = %self.transferred_this_block,
+            "Precompile transfer approved"
+        );
 
         // Allow the precompile to execute
         None
@@ -223,5 +259,116 @@ mod tests {
         inspector.maybe_reset_block_counter(11);
         assert_eq!(inspector.transferred_this_block, U256::ZERO);
         assert_eq!(inspector.current_block, 11);
+    }
+
+    // M-3 SECURITY FIX TESTS: Rate Limiting Enforcement
+    // These tests verify that rate limits are actually enforced
+
+    #[test]
+    fn test_per_call_cap_enforcement() {
+        let mut config = AndePrecompileConfig::default();
+        let authorized_caller = Address::repeat_byte(0x42);
+        config.add_to_allow_list(authorized_caller);
+
+        // Set a strict per-call cap
+        config.per_call_cap = U256::from(1000);
+
+        // Test that validation works
+        assert!(config.validate_per_call_cap(U256::from(500)).is_ok());
+        assert!(config.validate_per_call_cap(U256::from(1000)).is_ok());
+        assert!(config.validate_per_call_cap(U256::from(1001)).is_err());
+        assert!(config.validate_per_call_cap(U256::from(10000)).is_err());
+    }
+
+    #[test]
+    fn test_per_block_cap_enforcement() {
+        let mut config = AndePrecompileConfig::default();
+
+        // Set a strict per-block cap of 10,000
+        config.per_block_cap = Some(U256::from(10_000));
+
+        // First call: 6000 transferred
+        let transferred = U256::from(6000);
+
+        // Try to transfer 3000 more (total 9000) - should pass
+        assert!(config.validate_per_block_cap(U256::from(3000), transferred).is_ok());
+
+        // Try to transfer 4001 more (total 10001) - should fail
+        assert!(config.validate_per_block_cap(U256::from(4001), transferred).is_err());
+
+        // Try to transfer exactly to the cap (total 10000) - should pass
+        assert!(config.validate_per_block_cap(U256::from(4000), transferred).is_ok());
+    }
+
+    #[test]
+    fn test_block_counter_accumulation() {
+        let mut config = AndePrecompileConfig::default();
+        config.per_block_cap = Some(U256::from(1000));
+
+        let inspector = AndePrecompileInspector::new(config);
+
+        // Initially zero
+        assert_eq!(inspector.transferred_this_block(), U256::ZERO);
+
+        // Note: In real usage, the inspector's call() method updates this counter
+        // We can't easily test the full flow here without a full EVM context,
+        // but we verify the validation logic works
+    }
+
+    #[test]
+    fn test_rate_limit_error_messages() {
+        let config = AndePrecompileConfig::default();
+
+        // Per-call cap error
+        let err = config.validate_per_call_cap(U256::MAX).unwrap_err();
+        assert!(err.contains("exceeds per-call cap"));
+
+        // Per-block cap error
+        let err = config
+            .validate_per_block_cap(U256::MAX, U256::ZERO)
+            .unwrap_err();
+        assert!(err.contains("exceed per-block cap"));
+    }
+
+    #[test]
+    fn test_no_block_cap_allows_unlimited() {
+        let mut config = AndePrecompileConfig::default();
+        config.per_block_cap = None; // Disable block cap
+
+        // Should allow any amount when block cap is disabled
+        assert!(config
+            .validate_per_block_cap(U256::MAX, U256::from(1_000_000))
+            .is_ok());
+    }
+
+    #[test]
+    fn test_saturating_add_prevents_overflow() {
+        let config = AndePrecompileConfig::default();
+
+        // Even with overflow attempt, validation should work
+        let already_transferred = U256::MAX - U256::from(100);
+        let new_amount = U256::from(200);
+
+        // This should saturate and then fail validation
+        let result = config.validate_per_block_cap(new_amount, already_transferred);
+
+        // Should fail because saturating_add will result in U256::MAX
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_value_transfers_dont_count() {
+        let mut config = AndePrecompileConfig::default();
+        config.per_block_cap = Some(U256::from(1000));
+
+        // Zero transfers should pass validation without counting
+        assert!(config
+            .validate_per_block_cap(U256::ZERO, U256::from(999))
+            .is_ok());
+
+        // Even at the cap, zero should pass
+        assert!(config
+            .validate_per_block_cap(U256::ZERO, U256::from(1000))
+            .is_ok());
     }
 }

@@ -968,6 +968,7 @@ dependencies = [
  "jsonrpsee 0.24.10",
  "jsonrpsee-core 0.24.10",
  "jsonrpsee-proc-macros 0.24.10",
+ "lru 0.12.5",
  "num_cpus",
  "parking_lot",
  "reth-chainspec",

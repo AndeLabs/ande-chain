@@ -60,20 +60,60 @@ impl AndeMevRedirect {
     ///
     /// # Arguments
     ///
-    /// * `mev_sink` - Distribution contract address
+    /// * `mev_sink` - Distribution contract address (must not be zero address)
     /// * `min_mev_threshold` - Minimum profit to classify as MEV (default: 0.001 ETH)
-    pub const fn new(mev_sink: Address, min_mev_threshold: U256) -> Self {
+    ///
+    /// # Panics
+    ///
+    /// Panics if `mev_sink` is the zero address. Use `try_new()` for Result-based validation.
+    ///
+    /// # Security
+    ///
+    /// M-2 FIX: Validates MEV sink address to prevent loss of funds
+    pub fn new(mev_sink: Address, min_mev_threshold: U256) -> Self {
+        // SECURITY (M-2): Validate sink is not zero address
+        assert!(!mev_sink.is_zero(), "MEV sink cannot be zero address");
+
         Self {
             mev_sink,
             min_mev_threshold,
         }
     }
 
+    /// Creates a new MEV redirect policy with validation.
+    ///
+    /// # Arguments
+    ///
+    /// * `mev_sink` - Distribution contract address
+    /// * `min_mev_threshold` - Minimum profit to classify as MEV
+    ///
+    /// # Errors
+    ///
+    /// Returns `MevValidationError::ZeroAddress` if sink is zero address.
+    ///
+    /// # Security
+    ///
+    /// M-2 FIX: Validates MEV sink address to prevent loss of funds
+    pub fn try_new(mev_sink: Address, min_mev_threshold: U256) -> Result<Self, MevValidationError> {
+        if mev_sink.is_zero() {
+            return Err(MevValidationError::ZeroAddress);
+        }
+
+        Ok(Self {
+            mev_sink,
+            min_mev_threshold,
+        })
+    }
+
     /// Default threshold: 0.001 ETH = 1_000_000_000_000_000 wei
     pub const DEFAULT_MIN_MEV_THRESHOLD: U256 = U256::from_limbs([1_000_000_000_000_000u64, 0, 0, 0]);
 
     /// Creates a new redirect with default threshold
-    pub const fn with_default_threshold(mev_sink: Address) -> Self {
+    ///
+    /// # Security
+    ///
+    /// M-2 FIX: Validates MEV sink address to prevent loss of funds
+    pub fn with_default_threshold(mev_sink: Address) -> Self {
         Self::new(mev_sink, Self::DEFAULT_MIN_MEV_THRESHOLD)
     }
 
@@ -197,6 +237,14 @@ impl From<Address> for AndeMevRedirect {
     }
 }
 
+/// Errors that can occur during MEV redirect validation
+#[derive(Debug, Error, Clone, Copy, PartialEq, Eq)]
+pub enum MevValidationError {
+    /// MEV sink address cannot be zero
+    #[error("MEV sink address cannot be zero address")]
+    ZeroAddress,
+}
+
 /// Errors that can occur when applying MEV redirect
 #[derive(Debug, Error)]
 pub enum MevRedirectError<DbError> {
@@ -262,6 +310,37 @@ mod tests {
             AndeMevRedirect::DEFAULT_MIN_MEV_THRESHOLD,
             U256::from(1_000_000_000_000_000u64)
         );
+    }
+
+    // M-2 SECURITY FIX TESTS: MEV Sink Validation
+
+    #[test]
+    #[should_panic(expected = "MEV sink cannot be zero address")]
+    fn test_new_rejects_zero_address() {
+        let _ = AndeMevRedirect::new(Address::ZERO, U256::from(1000));
+    }
+
+    #[test]
+    fn test_try_new_rejects_zero_address() {
+        let result = AndeMevRedirect::try_new(Address::ZERO, U256::from(1000));
+        assert_eq!(result.unwrap_err(), MevValidationError::ZeroAddress);
+    }
+
+    #[test]
+    fn test_try_new_accepts_valid_address() {
+        let sink = address!("0x1234567890123456789012345678901234567890");
+        let result = AndeMevRedirect::try_new(sink, U256::from(1000));
+        assert!(result.is_ok());
+        let redirect = result.unwrap();
+        assert_eq!(redirect.mev_sink(), sink);
+    }
+
+    #[test]
+    fn test_with_default_threshold_validates() {
+        let sink = address!("0x1234567890123456789012345678901234567890");
+        let redirect = AndeMevRedirect::with_default_threshold(sink);
+        assert_eq!(redirect.mev_sink(), sink);
+        assert_eq!(redirect.min_threshold(), AndeMevRedirect::DEFAULT_MIN_MEV_THRESHOLD);
     }
 
     fn setup_context(base_fee: u64, sink: Address) -> TestContext {

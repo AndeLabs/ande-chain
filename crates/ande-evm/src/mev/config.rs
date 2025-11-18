@@ -49,6 +49,11 @@ impl MevConfig {
             .parse::<Address>()
             .map_err(|_| MevConfigError::InvalidSinkAddress)?;
 
+        // SECURITY (M-2): Validate sink is not zero address
+        if mev_sink.is_zero() {
+            return Err(MevConfigError::ZeroSinkAddress);
+        }
+
         // Min threshold is optional, defaults to 0.001 ETH
         let min_threshold = env::var("ANDE_MEV_MIN_THRESHOLD")
             .ok()
@@ -97,15 +102,26 @@ pub enum MevConfigError {
     /// Invalid MEV sink address format
     #[error("Invalid ANDE_MEV_SINK address format")]
     InvalidSinkAddress,
+
+    /// MEV sink address cannot be zero (M-2 Security Fix)
+    #[error("MEV sink address cannot be zero address")]
+    ZeroSinkAddress,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy_primitives::address;
+    use std::sync::Mutex;
+
+    // Global mutex to serialize environment variable tests
+    // Prevents race conditions when tests run in parallel
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_mev_config_disabled_by_default() {
+        let _lock = ENV_LOCK.lock().unwrap();
+
         // Clear env vars
         unsafe {
             env::remove_var("ANDE_MEV_ENABLED");
@@ -118,6 +134,8 @@ mod tests {
 
     #[test]
     fn test_mev_config_enabled_requires_sink() {
+        let _lock = ENV_LOCK.lock().unwrap();
+
         unsafe {
             env::set_var("ANDE_MEV_ENABLED", "true");
             env::remove_var("ANDE_MEV_SINK");
@@ -134,11 +152,14 @@ mod tests {
 
     #[test]
     fn test_mev_config_valid() {
+        let _lock = ENV_LOCK.lock().unwrap();
+
         let sink = address!("0x1234567890123456789012345678901234567890");
 
         unsafe {
             env::set_var("ANDE_MEV_ENABLED", "true");
             env::set_var("ANDE_MEV_SINK", sink.to_string());
+            env::remove_var("ANDE_MEV_MIN_THRESHOLD");  // Clear to get default
         }
 
         let config = MevConfig::from_env().unwrap().expect("config should be present");
@@ -155,6 +176,8 @@ mod tests {
 
     #[test]
     fn test_mev_config_custom_threshold() {
+        let _lock = ENV_LOCK.lock().unwrap();
+
         let sink = address!("0x1234567890123456789012345678901234567890");
         let threshold = U256::from(5_000_000_000_000_000u64); // 0.005 ETH
 
@@ -179,9 +202,37 @@ mod tests {
     fn test_to_redirect() {
         let sink = address!("0x1234567890123456789012345678901234567890");
         let config = MevConfig::new(sink);
-        
+
         let redirect = config.to_redirect();
         assert_eq!(redirect.mev_sink(), sink);
         assert_eq!(redirect.min_threshold(), AndeMevRedirect::DEFAULT_MIN_MEV_THRESHOLD);
+    }
+
+    // M-2 SECURITY FIX TEST: Zero Address Validation
+
+    #[test]
+    fn test_mev_config_rejects_zero_address() {
+        let _lock = ENV_LOCK.lock().unwrap();
+
+        unsafe {
+            env::set_var("ANDE_MEV_ENABLED", "true");
+            env::set_var("ANDE_MEV_SINK", "0x0000000000000000000000000000000000000000");
+        }
+
+        let result = MevConfig::from_env();
+        assert!(result.is_err());
+
+        match result.unwrap_err() {
+            MevConfigError::ZeroSinkAddress => {
+                // Expected error
+            }
+            other => panic!("Expected ZeroSinkAddress error, got {:?}", other),
+        }
+
+        // Cleanup
+        unsafe {
+            env::remove_var("ANDE_MEV_ENABLED");
+            env::remove_var("ANDE_MEV_SINK");
+        }
     }
 }
