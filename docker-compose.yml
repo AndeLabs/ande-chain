@@ -567,3 +567,21 @@ services:
       options:
         max-size: "100m"
         max-file: "10"
+
+  # ============================================
+  # 13. Cloudflare Tunnel (SSL/TLS)
+  # ============================================
+  cloudflared:
+    container_name: cloudflared
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - andechain
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
