@@ -43,8 +43,8 @@ pub use evm_config::{
     AndeTokenDualityPrecompile,
     AndeEvmFactory,
     AndePrecompileProvider,
+    AndeConfigError,
     ANDE_PRECOMPILE_ADDRESS,
-    ANDE_TOKEN_ADDRESS,
 };
 pub use parallel_executor::{ParallelExecutor, TxExecutionResult, optimal_worker_count};
 pub use types::{EvolvePayloadAttributes, PayloadAttributesError};

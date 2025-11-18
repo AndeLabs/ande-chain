@@ -1,35 +1,45 @@
-//! ANDE Chain Node - Sovereign Rollup with Evolve Sequencer & Celestia DA
+//! # ⛔ DEPRECATED - DO NOT USE THIS BINARY ⛔
 //!
-//! ⚠️ IMPORTANT - Estado actual del nodo (2025-11-15)
+//! ## USE `ande-reth` INSTEAD
 //!
-//! Este binario es un SKELETON/TEMPLATE para demostración de componentes.
-//! NO es un nodo Reth completo funcional.
+//! This binary (`ande-node`) is a **DEPRECATED SKELETON** for testing consensus integration only.
 //!
-//! PROBLEMA:
-//! - NO ejecuta el EVM de Reth
-//! - NO procesa transacciones reales
-//! - Solo simula producción de bloques
+//! ### ❌ What this binary DOES NOT do:
+//! - Does NOT execute the EVM
+//! - Does NOT process real transactions
+//! - Does NOT validate blocks
+//! - Only simulates block production timing
 //!
-//! SOLUCIÓN ACTUAL (Testnet):
-//! - Usar NativeTransferPrecompileMock desplegado en 0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE
-//! - Ver: contracts/deployments/testnet-6174-production.json
+//! ### ✅ What you SHOULD use instead:
 //!
-//! SOLUCIÓN FUTURA (Mainnet):
-//! - Crear `ande-reth` crate (similar a op-reth)
-//! - Integrar AndePrecompileProvider en el EVM de Reth
-//! - Ver: docs/PRECOMPILE_INTEGRATION_FINDINGS.md
+//! **For production/testnet: Use `ande-reth`**
+//! ```bash
+//! # Build the real node
+//! cargo build --release -p ande-reth
 //!
-//! Referencias:
-//! - AndePrecompileProvider: crates/ande-evm/src/evm_config/ande_precompile_provider.rs
-//! - op-reth example: https://github.com/paradigmxyz/reth/tree/main/bin/reth
+//! # Run with Docker (recommended)
+//! docker-compose up -d ande-node  # Uses ande-reth binary
+//! ```
 //!
-//! Production-ready node implementation featuring:
-//! - Decentralized Multi-Sequencer Consensus with CometBFT
-//! - Token Duality Precompile at 0x00...FD
-//! - Parallel EVM execution with Block-STM
-//! - MEV detection and protection
-//! - Evolve Sequencer integration
-//! - Celestia Data Availability
+//! ### Why does this crate exist?
+//!
+//! This crate is kept for:
+//! 1. Testing consensus integration in isolation
+//! 2. Demonstrating component wiring
+//! 3. Development reference
+//!
+//! ### The real node: `ande-reth`
+//!
+//! Location: `crates/ande-reth/`
+//!
+//! Features:
+//! - Full Reth EVM execution
+//! - Token Duality Precompile at 0xFD
+//! - Real transaction processing
+//! - JSON-RPC API
+//! - P2P networking
+//!
+//! See: `crates/ande-reth/src/main.rs`
 
 use ande_node::consensus_integration::{ConsensusIntegration, ConsensusIntegrationBuilder};
 use ande_consensus::ConsensusConfig;
@@ -60,6 +70,8 @@ const CELESTIA_ENDPOINT: &str = "http://celestia:26658";
 const CELESTIA_NAMESPACE: &str = "00000000000000000000616e6465636861696e2d7631"; // andechain-v1
 
 /// Main entry point for ANDE Chain node
+///
+/// ⛔ **DEPRECATED** - Use `ande-reth` binary instead!
 fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt()
@@ -69,7 +81,38 @@ fn main() -> Result<()> {
         )
         .init();
 
-    info!("🚀 Starting ANDE Chain Node - Sovereign Rollup");
+    // ============================================================
+    // ⛔⛔⛔ CRITICAL WARNING - WRONG BINARY ⛔⛔⛔
+    // ============================================================
+    eprintln!("\n");
+    eprintln!("╔══════════════════════════════════════════════════════════════╗");
+    eprintln!("║  ⛔⛔⛔  WARNING: DEPRECATED BINARY  ⛔⛔⛔                    ║");
+    eprintln!("╠══════════════════════════════════════════════════════════════╣");
+    eprintln!("║                                                              ║");
+    eprintln!("║  You are running `ande-node` which is a TEST SKELETON.       ║");
+    eprintln!("║  This binary does NOT process real transactions!             ║");
+    eprintln!("║                                                              ║");
+    eprintln!("║  ✅ USE THIS INSTEAD:                                        ║");
+    eprintln!("║                                                              ║");
+    eprintln!("║     cargo build --release -p ande-reth                       ║");
+    eprintln!("║     ./target/release/ande-reth node ...                      ║");
+    eprintln!("║                                                              ║");
+    eprintln!("║  Or with Docker:                                             ║");
+    eprintln!("║     docker-compose up -d ande-node                           ║");
+    eprintln!("║                                                              ║");
+    eprintln!("╚══════════════════════════════════════════════════════════════╝");
+    eprintln!("\n");
+
+    // Allow override for testing purposes
+    if std::env::var("ANDE_NODE_ALLOW_DEPRECATED").is_err() {
+        error!("⛔ Refusing to start deprecated binary. Set ANDE_NODE_ALLOW_DEPRECATED=1 to override.");
+        return Err(eyre::eyre!("Use ande-reth binary instead. See: crates/ande-reth/"));
+    }
+
+    warn!("⚠️  Running deprecated ande-node binary (ANDE_NODE_ALLOW_DEPRECATED=1)");
+    warn!("⚠️  This is for testing only. Use ande-reth for production!");
+
+    info!("🚀 Starting ANDE Chain Node - Sovereign Rollup (DEPRECATED)");
     info!("Chain ID: {}", CHAIN_ID);
     info!("┌─────────────────────────────────────────────────────");
     info!("│ ANDE Token Duality Precompile");

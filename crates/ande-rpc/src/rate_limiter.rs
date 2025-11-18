@@ -16,9 +16,26 @@ use std::{
     collections::HashMap,
     net::IpAddr,
     num::NonZeroU32,
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard, PoisonError},
     time::{Duration, Instant},
 };
+
+/// Helper to handle poisoned RwLock for read access
+/// If the lock is poisoned (thread panicked while holding it), we recover the inner value
+fn read_lock_recover<T>(lock: &RwLock<T>) -> RwLockReadGuard<'_, T> {
+    lock.read().unwrap_or_else(|e| {
+        tracing::error!("RwLock poisoned during read, recovering: {}", e);
+        e.into_inner()
+    })
+}
+
+/// Helper to handle poisoned RwLock for write access
+fn write_lock_recover<T>(lock: &RwLock<T>) -> RwLockWriteGuard<'_, T> {
+    lock.write().unwrap_or_else(|e| {
+        tracing::error!("RwLock poisoned during write, recovering: {}", e);
+        e.into_inner()
+    })
+}
 
 /// Rate limiter for RPC endpoints
 #[derive(Clone)]
@@ -178,7 +195,7 @@ impl RpcRateLimiter {
         }
         
         // Check per-IP limit
-        let mut limiters = self.ip_limiters.write().unwrap();
+        let mut limiters = write_lock_recover(&self.ip_limiters);
         let ip_limiter = limiters.entry(ip).or_insert_with(|| {
             let quota = Quota::per_second(self.config.requests_per_second)
                 .allow_burst(self.config.burst_size);
@@ -220,7 +237,7 @@ impl RpcRateLimiter {
     
     /// Check if an IP is currently banned
     fn is_banned(&self, ip: &IpAddr) -> Option<BanInfo> {
-        let mut banned = self.banned_ips.write().unwrap();
+        let mut banned = write_lock_recover(&self.banned_ips);
         
         if let Some(ban_info) = banned.get(ip) {
             // Check if ban has expired
@@ -238,14 +255,12 @@ impl RpcRateLimiter {
     /// Manually ban an IP address
     pub fn ban_ip(&self, ip: IpAddr, duration: Duration, reason: BanReason) {
         let expires_at = Instant::now() + duration;
-        let violation_count = self.ip_limiters
-            .read()
-            .unwrap()
+        let violation_count = read_lock_recover(&self.ip_limiters)
             .get(&ip)
             .map(|l| l.violations)
             .unwrap_or(0);
-        
-        self.banned_ips.write().unwrap().insert(
+
+        write_lock_recover(&self.banned_ips).insert(
             ip,
             BanInfo {
                 expires_at,
@@ -264,7 +279,7 @@ impl RpcRateLimiter {
     
     /// Manually unban an IP address
     pub fn unban_ip(&self, ip: IpAddr) -> bool {
-        let removed = self.banned_ips.write().unwrap().remove(&ip).is_some();
+        let removed = write_lock_recover(&self.banned_ips).remove(&ip).is_some();
         
         if removed {
             tracing::info!(%ip, "IP address unbanned");
@@ -275,7 +290,7 @@ impl RpcRateLimiter {
     
     /// Clean up old IP limiters to prevent memory leak
     pub fn cleanup_old_entries(&self) {
-        let mut limiters = self.ip_limiters.write().unwrap();
+        let mut limiters = write_lock_recover(&self.ip_limiters);
         let cutoff = Instant::now() - self.config.cleanup_interval;
         
         let before_count = limiters.len();
@@ -292,8 +307,8 @@ impl RpcRateLimiter {
     
     /// Get statistics about current rate limiting
     pub fn stats(&self) -> RateLimitStats {
-        let limiters = self.ip_limiters.read().unwrap();
-        let banned = self.banned_ips.read().unwrap();
+        let limiters = read_lock_recover(&self.ip_limiters);
+        let banned = read_lock_recover(&self.banned_ips);
         
         RateLimitStats {
             tracked_ips: limiters.len(),

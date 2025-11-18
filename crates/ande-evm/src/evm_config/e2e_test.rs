@@ -10,9 +10,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::evm_config::{
-        ANDE_PRECOMPILE_ADDRESS, ANDE_TOKEN_ADDRESS,
-    };
+    use crate::evm_config::ANDE_PRECOMPILE_ADDRESS;
 
     // ============================================
     // Basic Infrastructure Tests
@@ -36,11 +34,13 @@ mod tests {
     }
 
     #[test]
-    fn test_ande_token_address_placeholder() {
-        use alloy_primitives::Address;
+    fn test_ande_config_error_types() {
+        use crate::evm_config::AndeConfigError;
 
-        // Will be set via genesis in production
-        assert_eq!(ANDE_TOKEN_ADDRESS, Address::ZERO);
+        // Verify error types have proper Display impl
+        let err = AndeConfigError::MissingAdmin;
+        let msg = format!("{}", err);
+        assert!(msg.contains("ANDE_ADMIN"));
     }
 
     // ============================================

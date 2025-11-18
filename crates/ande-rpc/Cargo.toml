@@ -6,3 +6,7 @@ license.workspace = true
 
 [dependencies]
 ande-primitives = { workspace = true }
+governor = "0.6"
+nonzero_ext = "0.3"
+thiserror.workspace = true
+tracing.workspace = true

@@ -23,8 +23,8 @@ mod e2e_test;
 pub use ande_token_duality::{
     AndeTokenDualityPrecompile,
     AndePrecompileConfig as TokenDualityConfig,
+    AndeConfigError,
     ANDE_PRECOMPILE_ADDRESS,
-    ANDE_TOKEN_ADDRESS,
 };
 
 // Security and configuration

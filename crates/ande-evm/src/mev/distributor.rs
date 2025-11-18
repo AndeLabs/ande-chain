@@ -2,12 +2,38 @@
 //!
 //! Provides interface to interact with the MEVDistributor smart contract
 //! for depositing captured MEV and managing epoch distributions.
+//!
+//! ## Contract Integration
+//!
+//! The MEVDistributor contract handles:
+//! - MEV deposits from the sequencer
+//! - Epoch-based distribution tracking
+//! - Reward claims for stakers
+//!
+//! Distribution splits:
+//! - 80% to veANDE stakers
+//! - 15% protocol fee
+//! - 5% treasury
 
 use alloy_primitives::{Address, U256};
+use ethers::prelude::{abigen, Provider, Http, Middleware};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
+
+// Generate contract bindings
+abigen!(
+    MEVDistributorContract,
+    r#"[
+        function depositMEV(uint256 amount) external
+        function settleEpoch() external
+        function currentEpoch() external view returns (uint256)
+        function epochs(uint256 epochNum) external view returns (uint256 totalMEVCaptured, uint256 totalVotingPower, uint256 stakersReward, uint256 protocolFee, uint256 treasuryAmount, bool settled, uint256 timestamp)
+        function epochStartTime() external view returns (uint256)
+        function EPOCH_DURATION() external pure returns (uint256)
+    ]"#
+);
 
 /// Epoch data from distributor contract
 #[derive(Debug, Clone)]
@@ -32,25 +58,27 @@ pub struct EpochData {
 #[derive(Debug)]
 pub struct MevDistributorClient {
     /// Distributor contract address
-    #[allow(dead_code)]
     contract_address: Address,
     /// Sequencer address
-    #[allow(dead_code)]
     sequencer_address: Address,
+    /// HTTP provider for contract calls
+    provider: Option<Arc<Provider<Http>>>,
     /// Accumulated MEV waiting to be deposited
     mev_buffer: Arc<RwLock<U256>>,
     /// Last deposit timestamp
     last_deposit_time: Arc<RwLock<SystemTime>>,
-    /// Current epoch number
+    /// Current epoch number (cached)
     current_epoch: Arc<RwLock<u64>>,
     /// Deposit interval
     deposit_interval: Duration,
     /// Maximum MEV buffer before forcing deposit
     max_buffer: U256,
+    /// RPC URL for provider
+    rpc_url: Option<String>,
 }
 
 impl MevDistributorClient {
-    /// Create new distributor client
+    /// Create new distributor client without provider (for local testing)
     pub fn new(
         contract_address: Address,
         sequencer_address: Address,
@@ -60,15 +88,77 @@ impl MevDistributorClient {
         Self {
             contract_address,
             sequencer_address,
+            provider: None,
             mev_buffer: Arc::new(RwLock::new(U256::ZERO)),
             last_deposit_time: Arc::new(RwLock::new(SystemTime::now())),
             current_epoch: Arc::new(RwLock::new(1)),
             deposit_interval,
             max_buffer,
+            rpc_url: None,
         }
     }
-    
-    /// Create with default configuration
+
+    /// Create distributor client with RPC provider for contract calls
+    pub fn with_provider(
+        contract_address: Address,
+        sequencer_address: Address,
+        rpc_url: &str,
+        deposit_interval: Duration,
+        max_buffer: U256,
+    ) -> Result<Self, String> {
+        let provider = Provider::<Http>::try_from(rpc_url)
+            .map_err(|e| format!("Failed to create provider: {}", e))?;
+
+        Ok(Self {
+            contract_address,
+            sequencer_address,
+            provider: Some(Arc::new(provider)),
+            mev_buffer: Arc::new(RwLock::new(U256::ZERO)),
+            last_deposit_time: Arc::new(RwLock::new(SystemTime::now())),
+            current_epoch: Arc::new(RwLock::new(1)),
+            deposit_interval,
+            max_buffer,
+            rpc_url: Some(rpc_url.to_string()),
+        })
+    }
+
+    /// Create from environment variables
+    pub fn from_env() -> Result<Self, String> {
+        let contract_address = std::env::var("MEV_DISTRIBUTOR_ADDRESS")
+            .map_err(|_| "MEV_DISTRIBUTOR_ADDRESS not set")?
+            .parse()
+            .map_err(|e| format!("Invalid MEV_DISTRIBUTOR_ADDRESS: {}", e))?;
+
+        let sequencer_address = std::env::var("SEQUENCER_ADDRESS")
+            .map_err(|_| "SEQUENCER_ADDRESS not set")?
+            .parse()
+            .map_err(|e| format!("Invalid SEQUENCER_ADDRESS: {}", e))?;
+
+        let rpc_url = std::env::var("RPC_URL")
+            .unwrap_or_else(|_| "http://localhost:8545".to_string());
+
+        let deposit_interval = std::env::var("MEV_DEPOSIT_INTERVAL")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .map(Duration::from_secs)
+            .unwrap_or_else(|| Duration::from_secs(3600));
+
+        let max_buffer = std::env::var("MEV_MAX_BUFFER")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(|v| U256::from(v) * U256::from(10u64.pow(18)))
+            .unwrap_or_else(|| U256::from(1000) * U256::from(10u64.pow(18)));
+
+        Self::with_provider(
+            contract_address,
+            sequencer_address,
+            &rpc_url,
+            deposit_interval,
+            max_buffer,
+        )
+    }
+
+    /// Create with default configuration (for testing)
     pub fn default_config(contract_address: Address, sequencer_address: Address) -> Self {
         Self::new(
             contract_address,
@@ -76,6 +166,11 @@ impl MevDistributorClient {
             Duration::from_secs(3600), // 1 hour
             U256::from(1000) * U256::from(10u64.pow(18)), // 1000 ANDE
         )
+    }
+
+    /// Check if provider is configured for contract calls
+    pub fn has_provider(&self) -> bool {
+        self.provider.is_some()
     }
     
     /// Add MEV to buffer
@@ -117,30 +212,52 @@ impl MevDistributorClient {
         let amount = {
             let mut buffer = self.mev_buffer.write().await;
             let amount = *buffer;
-            
+
             if amount == U256::ZERO {
                 return Ok(());
             }
-            
+
             // Clear buffer
             *buffer = U256::ZERO;
             amount
         };
-        
+
         // Update last deposit time
         {
             let mut last_deposit = self.last_deposit_time.write().await;
             *last_deposit = SystemTime::now();
         }
-        
+
         info!(
             "Depositing MEV to distributor: amount={}, contract={}",
             amount, self.contract_address
         );
-        
-        // In production, this would call the smart contract
-        // self.call_contract_deposit_mev(amount).await?;
-        
+
+        // Call contract if provider is configured
+        if let Some(provider) = &self.provider {
+            // Convert alloy Address to ethers Address
+            let contract_addr = ethers::types::Address::from_slice(self.contract_address.as_slice());
+            let contract = MEVDistributorContract::new(contract_addr, provider.clone());
+
+            // Convert alloy U256 to ethers U256
+            let eth_amount = ethers::types::U256::from_big_endian(&amount.to_be_bytes::<32>());
+
+            match contract.deposit_mev(eth_amount).call().await {
+                Ok(_) => {
+                    info!("MEV deposit successful: amount={}", amount);
+                }
+                Err(e) => {
+                    // On error, return the amount to buffer
+                    let mut buffer = self.mev_buffer.write().await;
+                    *buffer += amount;
+                    error!("MEV deposit failed, returning to buffer: {}", e);
+                    return Err(format!("Contract call failed: {}", e));
+                }
+            }
+        } else {
+            warn!("No provider configured, MEV deposit not sent to contract");
+        }
+
         Ok(())
     }
     

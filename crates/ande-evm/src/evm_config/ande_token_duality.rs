@@ -40,10 +40,6 @@ pub mod selectors {
 /// ANDE Token Duality Precompile Address: 0x00..fd
 pub const ANDE_PRECOMPILE_ADDRESS: Address = address!("00000000000000000000000000000000000000fd");
 
-/// Address of the ANDEToken contract authorized to call this precompile
-/// Configured via genesis or environment variable ANDE_TOKEN_ADDRESS
-pub const ANDE_TOKEN_ADDRESS: Address = Address::ZERO;
-
 /// Default per-call cap: 1 million ANDE (with 18 decimals)
 const DEFAULT_PER_CALL_CAP: u128 = 1_000_000;
 
@@ -69,6 +65,8 @@ pub struct AndePrecompileConfig {
 impl Default for AndePrecompileConfig {
     fn default() -> Self {
         Self {
+            // SECURITY: Default admin is ZERO which means NO admin access
+            // This is intentional - admin MUST be explicitly configured via environment
             admin: Address::ZERO,
             per_call_cap: U256::from(DEFAULT_PER_CALL_CAP) * U256::from(10u64).pow(U256::from(18)),
             per_block_cap: U256::from(DEFAULT_PER_BLOCK_CAP) * U256::from(10u64).pow(U256::from(18)),
@@ -77,30 +75,139 @@ impl Default for AndePrecompileConfig {
     }
 }
 
+/// Error type for configuration errors
+#[derive(Debug, Clone)]
+pub enum AndeConfigError {
+    /// Admin address is zero (not configured)
+    MissingAdmin,
+    /// Invalid address format
+    InvalidAddress(String),
+    /// Invalid numeric value
+    InvalidNumber(String),
+}
+
+impl std::fmt::Display for AndeConfigError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingAdmin => write!(f, "ANDE_ADMIN environment variable is required but not set or is zero address"),
+            Self::InvalidAddress(s) => write!(f, "Invalid address format: {}", s),
+            Self::InvalidNumber(s) => write!(f, "Invalid number format: {}", s),
+        }
+    }
+}
+
+impl std::error::Error for AndeConfigError {}
+
 impl AndePrecompileConfig {
     /// Load configuration from environment variables
+    ///
+    /// # Required Environment Variables
+    /// - `ANDE_ADMIN`: Admin address (required, cannot be zero)
+    ///
+    /// # Optional Environment Variables
+    /// - `ANDE_PER_CALL_CAP`: Maximum amount per transfer (default: 1M ANDE)
+    /// - `ANDE_PER_BLOCK_CAP`: Maximum amount per block (default: 10M ANDE)
     pub fn from_env() -> Self {
         let mut config = Self::default();
-        
+
+        // Load admin address (required for production)
         if let Ok(admin) = std::env::var("ANDE_ADMIN") {
-            if let Ok(addr) = admin.parse() {
-                config.admin = addr;
+            match admin.parse::<Address>() {
+                Ok(addr) => {
+                    if addr.is_zero() {
+                        tracing::warn!(
+                            target: "ande_precompile",
+                            "⚠️ ANDE_ADMIN is set to zero address - admin functions will be disabled"
+                        );
+                    } else {
+                        tracing::info!(
+                            target: "ande_precompile",
+                            admin = ?addr,
+                            "✅ Admin address configured"
+                        );
+                    }
+                    config.admin = addr;
+                }
+                Err(e) => {
+                    tracing::error!(
+                        target: "ande_precompile",
+                        error = %e,
+                        value = %admin,
+                        "❌ Failed to parse ANDE_ADMIN address"
+                    );
+                }
             }
+        } else {
+            tracing::warn!(
+                target: "ande_precompile",
+                "⚠️ ANDE_ADMIN not set - admin functions will be disabled"
+            );
         }
-        
+
+        // Load per-call cap
         if let Ok(cap) = std::env::var("ANDE_PER_CALL_CAP") {
-            if let Ok(value) = cap.parse::<u64>() {
-                config.per_call_cap = U256::from(value);
+            match cap.parse::<u64>() {
+                Ok(value) => {
+                    config.per_call_cap = U256::from(value) * U256::from(10u64).pow(U256::from(18));
+                    tracing::info!(
+                        target: "ande_precompile",
+                        per_call_cap = %config.per_call_cap,
+                        "Per-call cap configured"
+                    );
+                }
+                Err(e) => {
+                    tracing::error!(
+                        target: "ande_precompile",
+                        error = %e,
+                        value = %cap,
+                        "❌ Failed to parse ANDE_PER_CALL_CAP, using default"
+                    );
+                }
             }
         }
-        
+
+        // Load per-block cap
         if let Ok(cap) = std::env::var("ANDE_PER_BLOCK_CAP") {
-            if let Ok(value) = cap.parse::<u64>() {
-                config.per_block_cap = U256::from(value);
+            match cap.parse::<u64>() {
+                Ok(value) => {
+                    config.per_block_cap = U256::from(value) * U256::from(10u64).pow(U256::from(18));
+                    tracing::info!(
+                        target: "ande_precompile",
+                        per_block_cap = %config.per_block_cap,
+                        "Per-block cap configured"
+                    );
+                }
+                Err(e) => {
+                    tracing::error!(
+                        target: "ande_precompile",
+                        error = %e,
+                        value = %cap,
+                        "❌ Failed to parse ANDE_PER_BLOCK_CAP, using default"
+                    );
+                }
             }
         }
-        
+
         config
+    }
+
+    /// Load configuration from environment with strict validation
+    ///
+    /// Returns error if admin is not configured or is zero address.
+    /// Use this for production deployments.
+    pub fn from_env_strict() -> Result<Self, AndeConfigError> {
+        let config = Self::from_env();
+
+        if config.admin.is_zero() {
+            return Err(AndeConfigError::MissingAdmin);
+        }
+
+        Ok(config)
+    }
+
+    /// Check if configuration is valid for production use
+    pub fn is_production_ready(&self) -> bool {
+        !self.admin.is_zero()
     }
 }
 
@@ -284,7 +391,10 @@ impl AndeTokenDualityPrecompile {
         }
         
         // Per-block cap
-        let mut tracker = self.block_tracker.write().unwrap();
+        let mut tracker = self.block_tracker.write().map_err(|e| {
+            tracing::error!(target: "ande_precompile", error = %e, "Block tracker lock poisoned");
+            PrecompileError::Other("internal error: block tracker lock poisoned".to_string())
+        })?;
         
         // Reset if new block
         if tracker.block_number != block_number {
@@ -445,7 +555,10 @@ impl Precompile for AndeTokenDualityPrecompile {
             }
             s if s == selectors::TRANSFERRED_THIS_BLOCK => {
                 // transferredThisBlock() returns (uint256)
-                let tracker = self.block_tracker.read().unwrap();
+                let tracker = self.block_tracker.read().map_err(|e| {
+                    tracing::error!(target: "ande_precompile", error = %e, "Block tracker lock poisoned");
+                    PrecompileError::Other("internal error: block tracker lock poisoned".to_string())
+                })?;
                 let result = tracker.total_transferred.to_be_bytes::<32>();
                 Ok(PrecompileOutput::new(0, Bytes::copy_from_slice(&result)))
             }
