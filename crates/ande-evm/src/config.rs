@@ -282,9 +282,9 @@ mod tests {
     fn test_cfg_env_conversion() {
         let config = AndeEvmConfig::production();
         let cfg_env = config.to_cfg_env();
-        
+
         assert_eq!(cfg_env.chain_id, 6174);
-        assert_eq!(cfg_env.spec_id, SpecId::CANCUN);
-        assert!(!cfg_env.disable_balance_check);
+        assert_eq!(cfg_env.spec, SpecId::CANCUN);
+        assert!(!cfg_env.disable_nonce_check);
     }
 }

@@ -265,13 +265,13 @@ mod tests {
     }
 
     fn setup_context(base_fee: u64, sink: Address) -> TestContext {
-        let mut ctx = Context::mainnet().with_db(EmptyDB::default());
+        let mut ctx: TestContext = Context::new(EmptyDB::default(), SpecId::CANCUN);
         ctx.block.basefee = base_fee;
         ctx.cfg.spec = SpecId::CANCUN;
-        
+
         // Load sink account
         ctx.journal_mut().load_account(sink).unwrap();
-        
+
         ctx
     }
 }

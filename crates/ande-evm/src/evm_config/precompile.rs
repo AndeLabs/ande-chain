@@ -279,4 +279,107 @@ mod tests {
 
         assert!(matches!(result, Err(PrecompileError::OutOfGas)));
     }
+
+    // ============================================
+    // Additional Comprehensive Tests
+    // ============================================
+
+    #[test]
+    fn test_max_value_transfer() {
+        let mut input = vec![0u8; 96];
+        input[12..32].copy_from_slice(&[0x01; 20]);
+        input[44..64].copy_from_slice(&[0x02; 20]);
+
+        // Set U256::MAX
+        input[64..96].fill(0xFF);
+
+        let result = ande_token_duality_run(&input, 100000);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_same_address_transfer() {
+        let mut input = vec![0u8; 96];
+        let addr = [0x01; 20];
+
+        // from and to are the same
+        input[12..32].copy_from_slice(&addr);
+        input[44..64].copy_from_slice(&addr);
+        input[95] = 100;
+
+        let result = ande_token_duality_run(&input, 100000);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_input_too_short() {
+        let inputs = vec![
+            vec![0u8; 0],
+            vec![0u8; 32],
+            vec![0u8; 64],
+            vec![0u8; 95],
+        ];
+
+        for input in inputs {
+            let result = ande_token_duality_run(&input, 10000);
+            assert!(result.is_err(), "Should fail for input length {}", input.len());
+        }
+    }
+
+    #[test]
+    fn test_input_too_long() {
+        let input = vec![0u8; 97];
+        let result = ande_token_duality_run(&input, 10000);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_large_transfers() {
+        let test_values = vec![
+            1_000_000_000_000_000_000u64, // 1 ETH
+            100_000_000_000_000_000_000u128 as u64, // Large value
+        ];
+
+        for value in test_values {
+            let mut input = vec![0u8; 96];
+            input[12..32].copy_from_slice(&[0x01; 20]);
+            input[44..64].copy_from_slice(&[0x02; 20]);
+
+            let value_bytes = value.to_be_bytes();
+            input[88..96].copy_from_slice(&value_bytes);
+
+            let result = ande_token_duality_run(&input, 100000);
+            assert!(result.is_ok(), "Failed for value {}", value);
+        }
+    }
+
+    #[test]
+    fn test_gas_exact_minimum() {
+        let mut input = vec![0u8; 96];
+        input[12..32].copy_from_slice(&[0x01; 20]);
+        input[44..64].copy_from_slice(&[0x02; 20]);
+        // value = 0 (already zeros)
+
+        // Should succeed with at least base gas
+        let result = ande_token_duality_run(&input, ANDE_PRECOMPILE_BASE_GAS + 1000);
+        assert!(result.is_ok());
+
+        // Should use reasonable gas for zero value (close to base gas)
+        let output = result.unwrap();
+        assert!(output.gas_used >= ANDE_PRECOMPILE_BASE_GAS);
+        assert!(output.gas_used <= ANDE_PRECOMPILE_BASE_GAS + 500);
+    }
+
+    #[test]
+    fn test_multiple_sequential_calls() {
+        for i in 1u8..=50 {
+            let mut input = vec![0u8; 96];
+            input[12..32].copy_from_slice(&[0x01; 20]);
+            input[44..64].copy_from_slice(&[i; 20]);
+            input[95] = i;
+
+            let result = ande_token_duality_run(&input, 100000);
+            assert!(result.is_ok(), "Failed at iteration {}", i);
+        }
+    }
 }

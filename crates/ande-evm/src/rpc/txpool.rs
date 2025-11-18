@@ -117,13 +117,14 @@ mod tests {
         // Test with default config
         let config = EvolveConfig::default();
         assert_eq!(config.max_txpool_bytes, 1_939_865); // 1.85 MiB
+        assert_eq!(config.max_txpool_gas, 30_000_000); // 30M gas
 
         // Test with custom config
-        let custom_config = EvolveConfig::new(1000);
+        let custom_config = EvolveConfig {
+            max_txpool_bytes: 1000,
+            max_txpool_gas: 1_000_000,
+        };
         assert_eq!(custom_config.max_txpool_bytes, 1000);
-        // And custom gas using builder
-        let custom_with_gas = EvolveConfig::new_with_gas(1000, 1_000_000);
-        assert_eq!(custom_with_gas.max_txpool_bytes, 1000);
-        assert_eq!(custom_with_gas.max_txpool_gas, 1_000_000);
+        assert_eq!(custom_config.max_txpool_gas, 1_000_000);
     }
 }

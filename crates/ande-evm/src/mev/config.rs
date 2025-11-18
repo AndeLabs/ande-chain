@@ -107,58 +107,72 @@ mod tests {
     #[test]
     fn test_mev_config_disabled_by_default() {
         // Clear env vars
-        env::remove_var("ANDE_MEV_ENABLED");
-        env::remove_var("ANDE_MEV_SINK");
-        
+        unsafe {
+            env::remove_var("ANDE_MEV_ENABLED");
+            env::remove_var("ANDE_MEV_SINK");
+        }
+
         let config = MevConfig::from_env().unwrap();
         assert!(config.is_none());
     }
 
     #[test]
     fn test_mev_config_enabled_requires_sink() {
-        env::set_var("ANDE_MEV_ENABLED", "true");
-        env::remove_var("ANDE_MEV_SINK");
-        
+        unsafe {
+            env::set_var("ANDE_MEV_ENABLED", "true");
+            env::remove_var("ANDE_MEV_SINK");
+        }
+
         let result = MevConfig::from_env();
         assert!(result.is_err());
-        
+
         // Cleanup
-        env::remove_var("ANDE_MEV_ENABLED");
+        unsafe {
+            env::remove_var("ANDE_MEV_ENABLED");
+        }
     }
 
     #[test]
     fn test_mev_config_valid() {
         let sink = address!("0x1234567890123456789012345678901234567890");
-        
-        env::set_var("ANDE_MEV_ENABLED", "true");
-        env::set_var("ANDE_MEV_SINK", sink.to_string());
-        
+
+        unsafe {
+            env::set_var("ANDE_MEV_ENABLED", "true");
+            env::set_var("ANDE_MEV_SINK", sink.to_string());
+        }
+
         let config = MevConfig::from_env().unwrap().expect("config should be present");
         assert!(config.enabled);
         assert_eq!(config.mev_sink, sink);
         assert_eq!(config.min_threshold, AndeMevRedirect::DEFAULT_MIN_MEV_THRESHOLD);
-        
+
         // Cleanup
-        env::remove_var("ANDE_MEV_ENABLED");
-        env::remove_var("ANDE_MEV_SINK");
+        unsafe {
+            env::remove_var("ANDE_MEV_ENABLED");
+            env::remove_var("ANDE_MEV_SINK");
+        }
     }
 
     #[test]
     fn test_mev_config_custom_threshold() {
         let sink = address!("0x1234567890123456789012345678901234567890");
         let threshold = U256::from(5_000_000_000_000_000u64); // 0.005 ETH
-        
-        env::set_var("ANDE_MEV_ENABLED", "true");
-        env::set_var("ANDE_MEV_SINK", sink.to_string());
-        env::set_var("ANDE_MEV_MIN_THRESHOLD", "5000000000000000");
-        
+
+        unsafe {
+            env::set_var("ANDE_MEV_ENABLED", "true");
+            env::set_var("ANDE_MEV_SINK", sink.to_string());
+            env::set_var("ANDE_MEV_MIN_THRESHOLD", "5000000000000000");
+        }
+
         let config = MevConfig::from_env().unwrap().expect("config should be present");
         assert_eq!(config.min_threshold, threshold);
-        
+
         // Cleanup
-        env::remove_var("ANDE_MEV_ENABLED");
-        env::remove_var("ANDE_MEV_SINK");
-        env::remove_var("ANDE_MEV_MIN_THRESHOLD");
+        unsafe {
+            env::remove_var("ANDE_MEV_ENABLED");
+            env::remove_var("ANDE_MEV_SINK");
+            env::remove_var("ANDE_MEV_MIN_THRESHOLD");
+        }
     }
 
     #[test]
