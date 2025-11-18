@@ -1,10 +1,8 @@
 //! Prometheus metrics for consensus monitoring
 
 use prometheus::{
-    core::{AtomicU64, GenericCounter, GenericGauge},
     Histogram, HistogramOpts, IntCounter, IntGauge, Opts, Registry,
 };
-use std::sync::Arc;
 
 /// Consensus metrics for observability
 #[derive(Clone)]

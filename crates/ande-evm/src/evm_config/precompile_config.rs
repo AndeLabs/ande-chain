@@ -10,9 +10,13 @@ use alloy_primitives::{Address, U256};
 use std::collections::HashSet;
 use std::str::FromStr;
 
-/// Configuration for the ANDE Token Duality precompile
+/// Configuration for the ANDE Precompile Inspector
+///
+/// Note: This is different from AndePrecompileConfig in ande_token_duality.rs
+/// which uses storage-based authorization. This config uses in-memory HashSet
+/// for the inspector validation layer.
 #[derive(Clone, Debug)]
-pub struct AndePrecompileConfig {
+pub struct AndeInspectorConfig {
     /// The address of the ANDE Token Duality precompile (0x00..fd)
     pub precompile_address: Address,
     
@@ -34,10 +38,10 @@ pub struct AndePrecompileConfig {
     pub strict_validation: bool,
 }
 
-impl Default for AndePrecompileConfig {
+impl Default for AndeInspectorConfig {
     fn default() -> Self {
         Self {
-            precompile_address: super::precompile::ANDE_PRECOMPILE_ADDRESS,
+            precompile_address: super::ande_token_duality::ANDE_PRECOMPILE_ADDRESS,
             ande_token_address: Address::ZERO, // Will be set via config
             allow_list: HashSet::new(),
             // Default: 1 million ANDE tokens per call (with 18 decimals)
@@ -49,7 +53,7 @@ impl Default for AndePrecompileConfig {
     }
 }
 
-impl AndePrecompileConfig {
+impl AndeInspectorConfig {
     /// Creates a new `AndePrecompileConfig` from environment variables
     ///
     /// Environment variables:
@@ -164,10 +168,10 @@ mod tests {
 
     #[test]
     fn test_default_config() {
-        let config = AndePrecompileConfig::default();
+        let config = AndeInspectorConfig::default();
         assert_eq!(
             config.precompile_address,
-            super::super::precompile::ANDE_PRECOMPILE_ADDRESS
+            super::super::ande_token_duality::ANDE_PRECOMPILE_ADDRESS
         );
         assert!(config.strict_validation);
         assert!(config.per_call_cap > U256::ZERO);
@@ -176,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_allow_list() {
-        let mut config = AndePrecompileConfig::default();
+        let mut config = AndeInspectorConfig::default();
         let addr = Address::repeat_byte(0x42);
 
         assert!(!config.is_authorized(addr));
@@ -190,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_per_call_cap_validation() {
-        let config = AndePrecompileConfig::default();
+        let config = AndeInspectorConfig::default();
 
         // Amount within cap should pass
         let small_amount = U256::from(1000u64);
@@ -203,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_per_block_cap_validation() {
-        let config = AndePrecompileConfig::default();
+        let config = AndeInspectorConfig::default();
         let transferred = U256::from(5_000_000u64) * U256::from(10u64).pow(U256::from(18));
 
         // Amount within remaining cap should pass
@@ -219,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_testing_config() {
-        let config = AndePrecompileConfig::for_testing();
+        let config = AndeInspectorConfig::for_testing();
         assert!(!config.strict_validation);
         assert_eq!(config.per_call_cap, U256::MAX);
         assert!(config.per_block_cap.is_none());

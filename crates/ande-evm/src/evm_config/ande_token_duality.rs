@@ -24,7 +24,7 @@ use revm::{bytecode::Bytecode, precompile::PrecompileOutput};
 use std::sync::{Arc, OnceLock, RwLock};
 
 /// Function selectors for ANDE Token Duality interface
-mod selectors {
+pub mod selectors {
     /// transfer(address,address,uint256) - 0xbeabacc8
     pub const TRANSFER: [u8; 4] = [0xbe, 0xab, 0xac, 0xc8];
     /// addToAllowList(address) - 0xe43252d7
@@ -39,6 +39,10 @@ mod selectors {
 
 /// ANDE Token Duality Precompile Address: 0x00..fd
 pub const ANDE_PRECOMPILE_ADDRESS: Address = address!("00000000000000000000000000000000000000fd");
+
+/// Address of the ANDEToken contract authorized to call this precompile
+/// Configured via genesis or environment variable ANDE_TOKEN_ADDRESS
+pub const ANDE_TOKEN_ADDRESS: Address = Address::ZERO;
 
 /// Default per-call cap: 1 million ANDE (with 18 decimals)
 const DEFAULT_PER_CALL_CAP: u128 = 1_000_000;

@@ -183,6 +183,7 @@ impl AndeEvmConfig {
 }
 
 /// EVM configuration builder for flexible setup
+#[derive(Debug)]
 pub struct AndeEvmConfigBuilder {
     config: AndeEvmConfig,
 }

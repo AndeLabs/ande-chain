@@ -1,9 +1,8 @@
-//! Evolve-specific EVM configuration with custom precompiles
+//! ANDE EVM Configuration with Custom Precompiles
 //!
-//! This module provides the ANDE Token Duality precompile that will be
-//! injected into the EVM at runtime during block execution.
+//! This module provides the ANDE Token Duality precompile that enables
+//! ANDE tokens to function as both native gas and ERC-20-like tokens.
 
-pub mod precompile;
 pub mod precompile_config;
 pub mod precompile_inspector;
 pub mod ande_precompile_provider;
@@ -20,14 +19,21 @@ mod integration_test;
 #[cfg(test)]
 mod e2e_test;
 
-pub use precompile::{
-    ande_token_duality_precompile, ANDE_PRECOMPILE_ADDRESS, ANDE_TOKEN_ADDRESS,
+// Primary exports from ande_token_duality (the production implementation)
+pub use ande_token_duality::{
+    AndeTokenDualityPrecompile,
+    AndePrecompileConfig as TokenDualityConfig,
+    ANDE_PRECOMPILE_ADDRESS,
+    ANDE_TOKEN_ADDRESS,
 };
-pub use precompile_config::AndePrecompileConfig;
+
+// Security and configuration
+pub use precompile_config::AndeInspectorConfig;
 pub use precompile_inspector::AndePrecompileInspector;
+
+// EVM integration
 pub use ande_precompile_provider::AndePrecompileProvider;
 pub use ande_evm_factory::AndeEvmFactory;
-pub use ande_token_duality::{AndeTokenDualityPrecompile, AndePrecompileConfig as TokenDualityConfig, ANDE_PRECOMPILE_ADDRESS as TOKEN_DUALITY_ADDRESS};
 pub use wrapper::AndeEvmConfig;
 pub use factory::create_ande_evm_config;
 pub use injection::{create_ande_precompile_provider, ande_precompile_address};

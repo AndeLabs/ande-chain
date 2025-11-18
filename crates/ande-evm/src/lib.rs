@@ -40,10 +40,11 @@ mod tests;
 pub use config::{EvolveConfig, DEFAULT_MAX_TXPOOL_BYTES, DEFAULT_MAX_TXPOOL_GAS};
 pub use consensus::{EvolveConsensus, EvolveConsensusBuilder};
 pub use evm_config::{
-    ande_token_duality_precompile, 
+    AndeTokenDualityPrecompile,
     AndeEvmFactory,
     AndePrecompileProvider,
-    ANDE_PRECOMPILE_ADDRESS
+    ANDE_PRECOMPILE_ADDRESS,
+    ANDE_TOKEN_ADDRESS,
 };
 pub use parallel_executor::{ParallelExecutor, TxExecutionResult, optimal_worker_count};
 pub use types::{EvolvePayloadAttributes, PayloadAttributesError};

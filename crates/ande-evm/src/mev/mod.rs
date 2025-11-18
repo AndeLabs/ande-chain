@@ -27,7 +27,9 @@
 pub mod redirect;
 pub mod handler;
 pub mod config;
+pub mod detector;
 
 pub use redirect::{AndeMevRedirect, MevDetection, MevRedirectError, MevType};
 pub use handler::AndeHandler;
 pub use config::{MevConfig, MevConfigError};
+pub use detector::MevDetector;

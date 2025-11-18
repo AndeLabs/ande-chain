@@ -2,6 +2,11 @@
 //!
 //! This module implements a production-grade parallel executor inspired by Aptos Block-STM,
 //! providing optimistic parallel execution with conflict detection and automatic retry.
+//!
+//! Note: Some infrastructure code is defined but not yet fully integrated into the
+//! execution flow. This will be connected when parallel transaction execution is enabled.
+
+#![allow(dead_code)]
 
 use std::{
     collections::{HashMap, HashSet},
@@ -73,6 +78,17 @@ pub struct MultiVersionMemory {
     balances: Arc<RwLock<LruCache<Address, Vec<VersionedValue>>>>,
     nonces: Arc<RwLock<LruCache<Address, Vec<VersionedValue>>>>,
     max_versions_per_key: usize,
+}
+
+impl std::fmt::Debug for MultiVersionMemory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MultiVersionMemory")
+            .field("storage_len", &self.storage.read().len())
+            .field("balances_len", &self.balances.read().len())
+            .field("nonces_len", &self.nonces.read().len())
+            .field("max_versions_per_key", &self.max_versions_per_key)
+            .finish()
+    }
 }
 
 impl MultiVersionMemory {
@@ -218,6 +234,16 @@ pub struct DependencyTracker {
     // Single lock for atomic access to both read and write sets
     // This prevents TOCTOU vulnerabilities
     sets: Arc<RwLock<DependencySets>>,
+}
+
+impl std::fmt::Debug for DependencyTracker {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let sets = self.sets.read();
+        f.debug_struct("DependencyTracker")
+            .field("read_sets_count", &sets.read_sets.len())
+            .field("write_sets_count", &sets.write_sets.len())
+            .finish()
+    }
 }
 
 impl DependencyTracker {
@@ -484,6 +510,7 @@ impl ExecutionMetrics {
 /// Main parallel execution engine
 ///
 /// SECURITY FIX (M-5): Now includes circuit breaker for resilience
+#[derive(Debug)]
 pub struct ParallelExecutor {
     worker_count: usize,
     semaphore: Arc<Semaphore>,

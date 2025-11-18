@@ -5,7 +5,7 @@ use crate::{
     contract_client::ContractClient,
     error::{ConsensusError, Result},
     metrics::ConsensusMetrics,
-    types::{ConsensusState, ValidatorSetUpdate},
+    types::ConsensusState,
     validator_set::{ValidatorSet, ValidatorSetStats},
 };
 use alloy_primitives::Address;

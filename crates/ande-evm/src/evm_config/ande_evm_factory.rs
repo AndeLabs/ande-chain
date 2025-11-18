@@ -21,7 +21,7 @@
 
 use alloy_evm::{
     eth::{EthEvmBuilder, EthEvmContext},
-    precompiles::{PrecompilesMap, Precompile, DynPrecompile},
+    precompiles::{PrecompilesMap, Precompile},
     EvmEnv, EvmFactory,
 };
 use reth_ethereum::evm::{

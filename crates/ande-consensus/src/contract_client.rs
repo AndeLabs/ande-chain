@@ -2,14 +2,13 @@
 
 use crate::{
     error::{ConsensusError, Result},
-    types::{ValidatorInfo, ValidatorSetUpdate},
+    types::ValidatorInfo,
 };
 use alloy_primitives::{Address, B256};
 use ethers::{
-    contract::{abigen, Contract},
-    core::types::Filter,
+    contract::abigen,
     providers::{Http, Middleware, Provider, Ws},
-    types::{BlockNumber, H160, H256, U256 as EthU256},
+    types::H160,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;

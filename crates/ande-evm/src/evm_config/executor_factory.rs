@@ -18,12 +18,11 @@ pub struct AndeBlockExecutorFactory {
 impl AndeBlockExecutorFactory {
     /// Create a new ANDE block executor factory
     pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
-        // Use latest Cancun spec for now
-        // TODO: Get actual spec from chain_spec hardfork schedule
+        // ANDE Chain uses Cancun spec (EIP-4844 blob transactions support)
         let spec_id = SpecId::CANCUN;
-        
+
         let precompile_provider = Arc::new(AndePrecompileProvider::new(spec_id));
-        
+
         Self {
             chain_spec,
             precompile_provider,

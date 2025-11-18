@@ -34,9 +34,10 @@
 use ande_node::consensus_integration::{ConsensusIntegration, ConsensusIntegrationBuilder};
 use ande_consensus::ConsensusConfig;
 use ande_evm::{
-    evm_config::{ande_token_duality_precompile, ANDE_PRECOMPILE_ADDRESS},
+    evm_config::{AndeTokenDualityPrecompile, ANDE_PRECOMPILE_ADDRESS},
     parallel_executor::ParallelExecutor,
     config::AndeEvmConfig,
+    mev::MevDetector,
 };
 use alloy_genesis::Genesis;
 use reth_chainspec::{ChainSpec, ChainSpecBuilder};
@@ -50,10 +51,12 @@ const CHAIN_ID: u64 = 6174;
 
 /// Evolve Sequencer configuration
 const EVOLVE_RPC_URL: &str = "http://evolve:7331";
+#[allow(dead_code)]
 const EVOLVE_ENGINE_URL: &str = "http://evolve:8551";
 
 /// Celestia DA configuration
 const CELESTIA_ENDPOINT: &str = "http://celestia:26658";
+#[allow(dead_code)]
 const CELESTIA_NAMESPACE: &str = "00000000000000000000616e6465636861696e2d7631"; // andechain-v1
 
 /// Main entry point for ANDE Chain node
@@ -95,19 +98,19 @@ async fn run_node() -> Result<()> {
     info!("EVM Configuration initialized with optimizations: {:?}", evm_config.optimizations);
 
     // Initialize parallel executor
-    let parallel_executor = ParallelExecutor::new();
+    let _parallel_executor = ParallelExecutor::new();
     let worker_count = ande_evm::parallel_executor::optimal_worker_count();
     info!("Parallel Executor initialized with {} workers", worker_count);
 
     // Initialize MEV detector with default configuration
-    let mev_detector = MevDetector::default();
+    let _mev_detector = MevDetector::default();
     info!("MEV Detector enabled for transaction analysis");
 
-    // Initialize ANDE precompile (configured in genesis, injected at runtime)
-    let _precompile = ande_token_duality_precompile();
-    info!("✅ ANDE Precompile initialized and ready for runtime injection");
-    info!("   Precompile will be injected into EVM via payload builder hook");
-    info!("   Security features: allow-list, per-call caps, per-block caps");
+    // Initialize ANDE precompile (configured from environment, injected at runtime)
+    let _precompile = AndeTokenDualityPrecompile::from_env();
+    info!("✅ ANDE Token Duality Precompile initialized");
+    info!("   Address: {}", ANDE_PRECOMPILE_ADDRESS);
+    info!("   Security: admin authorization, per-call caps, per-block caps");
 
     // Build chain specification for ANDE sovereign rollup
     let chain_spec = build_ande_chain_spec()?;
@@ -156,7 +159,7 @@ async fn run_node() -> Result<()> {
     };
 
     // Create node configuration
-    let node_config = create_node_config(chain_spec, evm_config)?;
+    let _node_config = create_node_config(chain_spec, evm_config)?;
 
     // Start the node with all components
     info!("🌐 Starting ANDE Chain Sovereign Rollup...");

@@ -6,8 +6,8 @@
 //! - Per-block transfer limits
 //! - Full access to EVM context for state validation
 
-use super::precompile::ANDE_PRECOMPILE_ADDRESS;
-use super::precompile_config::AndePrecompileConfig;
+use super::ande_token_duality::ANDE_PRECOMPILE_ADDRESS;
+use super::precompile_config::AndeInspectorConfig;
 use alloy_primitives::{Address, U256};
 use revm::{
     context_interface::{Block, ContextTr},
@@ -19,8 +19,8 @@ use tracing::{warn, info, debug};
 /// Inspector that validates ANDE Token Duality precompile calls
 #[derive(Clone, Debug)]
 pub struct AndePrecompileInspector {
-    /// Configuration for the precompile
-    config: AndePrecompileConfig,
+    /// Configuration for the inspector
+    config: AndeInspectorConfig,
     
     /// Total amount transferred in the current block
     transferred_this_block: U256,
@@ -31,7 +31,7 @@ pub struct AndePrecompileInspector {
 
 impl AndePrecompileInspector {
     /// Creates a new inspector with the given configuration
-    pub fn new(config: AndePrecompileConfig) -> Self {
+    pub fn new(config: AndeInspectorConfig) -> Self {
         Self {
             config,
             transferred_this_block: U256::ZERO,
@@ -41,7 +41,7 @@ impl AndePrecompileInspector {
 
     /// Creates an inspector from environment variables
     pub fn from_env() -> eyre::Result<Self> {
-        let config = AndePrecompileConfig::from_env()?;
+        let config = AndeInspectorConfig::from_env()?;
         Ok(Self::new(config))
     }
 
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn test_block_counter_reset() {
-        let config = AndePrecompileConfig::for_testing();
+        let config = AndeInspectorConfig::for_testing();
         let mut inspector = AndePrecompileInspector::new(config);
 
         inspector.transferred_this_block = U256::from(1000);
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_per_call_cap_enforcement() {
-        let mut config = AndePrecompileConfig::default();
+        let mut config = AndeInspectorConfig::default();
         let authorized_caller = Address::repeat_byte(0x42);
         config.add_to_allow_list(authorized_caller);
 
@@ -281,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_per_block_cap_enforcement() {
-        let mut config = AndePrecompileConfig::default();
+        let mut config = AndeInspectorConfig::default();
 
         // Set a strict per-block cap of 10,000
         config.per_block_cap = Some(U256::from(10_000));
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_block_counter_accumulation() {
-        let mut config = AndePrecompileConfig::default();
+        let mut config = AndeInspectorConfig::default();
         config.per_block_cap = Some(U256::from(1000));
 
         let inspector = AndePrecompileInspector::new(config);
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_rate_limit_error_messages() {
-        let config = AndePrecompileConfig::default();
+        let config = AndeInspectorConfig::default();
 
         // Per-call cap error
         let err = config.validate_per_call_cap(U256::MAX).unwrap_err();
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_no_block_cap_allows_unlimited() {
-        let mut config = AndePrecompileConfig::default();
+        let mut config = AndeInspectorConfig::default();
         config.per_block_cap = None; // Disable block cap
 
         // Should allow any amount when block cap is disabled
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_saturating_add_prevents_overflow() {
-        let config = AndePrecompileConfig::default();
+        let config = AndeInspectorConfig::default();
 
         // Even with overflow attempt, validation should work
         let already_transferred = U256::MAX - U256::from(100);
@@ -357,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_zero_value_transfers_dont_count() {
-        let mut config = AndePrecompileConfig::default();
+        let mut config = AndeInspectorConfig::default();
         config.per_block_cap = Some(U256::from(1000));
 
         // Zero transfers should pass validation without counting
