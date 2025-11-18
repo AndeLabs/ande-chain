@@ -377,7 +377,7 @@ impl Precompile for AndeTokenDualityPrecompile {
         let internals = input.internals_mut();
         
         // Get block number from block environment
-        let block_number = 0u64; // TODO: Get actual block number from internals
+        let block_number = internals.block_number().to::<u64>();
         
         // Dispatch based on selector
         match selector {
