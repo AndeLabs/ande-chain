@@ -10,7 +10,7 @@ use super::precompile::ANDE_PRECOMPILE_ADDRESS;
 use super::precompile_config::AndePrecompileConfig;
 use alloy_primitives::{Address, U256};
 use revm::{
-    context_interface::ContextTr,
+    context_interface::{Block, ContextTr},
     inspector::Inspector,
     interpreter::{CallInputs, CallOutcome, Gas, InstructionResult, InterpreterResult},
 };
@@ -49,7 +49,6 @@ impl AndePrecompileInspector {
     const TRANSFER_CALLDATA_LEN: usize = 96; // from(32) + to(32) + value(32)
 
     /// Resets the block counter if we're in a new block
-    #[allow(dead_code)]
     fn maybe_reset_block_counter(&mut self, block_number: u64) {
         if block_number != self.current_block {
             self.current_block = block_number;
@@ -106,9 +105,9 @@ where
             return None;
         }
 
-        // TODO: Get current block number from context and reset counter
-        // This requires accessing the block environment from the context
-        // For now, we'll rely on manual reset between blocks
+        // Get current block number and reset counter if new block
+        let block_number = context.block().number().to::<u64>();
+        self.maybe_reset_block_counter(block_number);
 
         // Validate caller authorization
         if !self.config.is_authorized(inputs.caller) {
