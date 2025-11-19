@@ -1,0 +1,28 @@
+# ANDE Chain - Autoheal Service
+# Automatically restarts unhealthy containers
+# Based on willfarrell/autoheal (107M+ pulls)
+# Updated: 2025-11-18
+
+version: '3.9'
+
+services:
+  autoheal:
+    container_name: autoheal
+    image: willfarrell/autoheal:latest
+    restart: always
+    environment:
+      # Watch ALL containers with healthchecks
+      - AUTOHEAL_CONTAINER_LABEL=all
+      # Check every 5 seconds
+      - AUTOHEAL_INTERVAL=5
+      # Wait 60s before monitoring new containers (let them start)
+      - AUTOHEAL_START_PERIOD=60
+      # Give container 30s to stop gracefully before kill
+      - AUTOHEAL_DEFAULT_STOP_TIMEOUT=30
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
