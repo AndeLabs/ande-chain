@@ -22,7 +22,6 @@ services:
       - --celestia-url=http://celestia:26658
       - --celestia-token=${DA_AUTH_TOKEN}
       - --chain-id=ande-6174
-      - --enable-metrics
       - --port=2112
       - --jsonrpc-scrape-interval=10
       - --verbose
