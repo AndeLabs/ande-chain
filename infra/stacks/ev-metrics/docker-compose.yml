@@ -1,0 +1,47 @@
+# ANDE Chain - EV Metrics
+# DA monitoring and verification for Celestia
+# https://github.com/evstack/ev-metrics
+# Updated: 2025-11-18
+
+version: '3.9'
+
+services:
+  ev-metrics:
+    container_name: ev-metrics
+    image: ghcr.io/evstack/ev-metrics:latest
+    restart: unless-stopped
+    ports:
+      - "2112:2112"  # Prometheus metrics
+    command:
+      - monitor
+      - --header-namespace=andechain-v1
+      - --data-namespace=andechain-v1
+      - --evnode-addr=http://evolve:7331
+      - --evm-ws-url=ws://ande-node:8546
+      - --evm-rpc-url=http://ande-node:8545
+      - --celestia-url=http://celestia:26658
+      - --celestia-token=${DA_AUTH_TOKEN}
+      - --chain-id=ande-6174
+      - --enable-metrics
+      - --port=2112
+      - --jsonrpc-scrape-interval=10
+      - --verbose
+    environment:
+      - DA_AUTH_TOKEN=${DA_AUTH_TOKEN:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdLCJOb25jZSI6InNtM3UxL0pNR2p4c296TktVVy9tWEdIcjBPUlpudXgzanRQMkdEUTdBbHM9IiwiRXhwaXJlc0F0IjoiMDAwMS0wMS0wMVQwMDowMDowMFoifQ.hp2KgPgkXq1t5bnsMkngt1H7ElIYIazmzyJUUsw6LDk}
+    networks:
+      - andechain
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:2112/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+networks:
+  andechain:
+    external: true
